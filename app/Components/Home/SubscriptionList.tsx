@@ -69,11 +69,11 @@ const SubscriptionListItem = React.memo(
           activeOpacity={0.7}
           accessibilityRole="button"
         >
-          <View className="w-12 h-12 rounded-xl justify-center items-center bg-white/10">
-            {logoImages[item.icon] && (
+          <View className="w-10 h-10 rounded-xl justify-center items-center bg-white/10">
+            {logoImages[item.logoKey || "netflix"] && (
               <Image
-                source={logoImages[item.icon]}
-                className="w-8 h-8"
+                source={logoImages[item.logoKey || "netflix"]} // Changed from item.icon
+                className="w-10 h-10 rounded-xl"
                 resizeMode="contain"
                 accessibilityLabel={`${item.name} logo`}
               />
@@ -88,7 +88,7 @@ const SubscriptionListItem = React.memo(
           </View>
 
           <View className="items-end">
-            <Text className="text-brandBlue text-lg font-bold">
+            <Text className="text-white text-lg font-bold">
               ${item.price.toFixed(2)}
             </Text>
             <Text className="text-white/50 text-sm">

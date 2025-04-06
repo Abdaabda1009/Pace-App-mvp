@@ -1,112 +1,119 @@
 import { View, Text, TouchableOpacity } from "react-native";
-import React from "react";
+import React, { useState } from "react";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import BottomTabBar from "../Components/CustomTabBar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import AddSubscriptionModal from "../Components/AddSubscriptionModal";
 
 const _layout = () => {
   const insets = useSafeAreaInsets();
-  
+  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+
   return (
-    <Tabs
-      screenOptions={{
-        headerStyle: {
-          backgroundColor: "#0F1723",
-          borderBottomWidth: 0,
-        },
-        headerTitle: "",
-        headerTransparent: true,
-        headerShadowVisible: false,
-      }}
-      tabBar={(props) => {
-        const { state, navigation } = props;
-        const routeName = state.routes[state.index].name;
-        const routeToTabMap: Record<string, string> = {
-          index: "home",
-          Calender: "calendar",
-          Profile: "Profile",
-          Setting: "Setting",
-        };
-        const activeTab = routeToTabMap[routeName] || "home";
-
-        const handleTabPress = (tabName: string) => {
-          const targetRoute = tabName === "home" ? "index" : "Calender";
-          navigation.navigate(targetRoute);
-        };
-
-        const handleAddPress = () => {
-          navigation.navigate("add-subscription");
-        };
-
-        return (
-          <BottomTabBar
-            activeTab={activeTab}
-            onTabPress={handleTabPress}
-            onAddPress={handleAddPress}
-            bottomInset={0}
-            isHidden={false}
-          />
-        );
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={({ navigation }) => ({
-          headerShown: true,
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => navigation.navigate("Setting")}>
-              <Ionicons
-                name="settings-outline"
-                size={24}
-                color="white"
-                style={{ marginLeft: 15 }}
-              />
-            </TouchableOpacity>
-          ),
-          headerRight: () => (
-            <TouchableOpacity onPress={() => navigation.navigate("Profile")}>
-              <Ionicons
-                name="person-outline"
-                size={24}
-                color="white"
-                style={{ marginRight: 15 }}
-              />
-            </TouchableOpacity>
-          ),
-        })}
-      />
-      <Tabs.Screen
-        name="Calender"
-        options={{
-          headerShown: true,
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => console.log("Navigate to Calender")}
-            >
-              <Ionicons
-                name="settings-outline"
-                size={24}
-                color="white"
-                style={{ marginLeft: 15 }}
-              />
-            </TouchableOpacity>
-          ),
-          headerRight: () => (
-            <TouchableOpacity
-              onPress={() => console.log("Navigate to Profile")}
-            >
-              <Ionicons
-                name="person-outline"
-                size={24}
-                color="white"
-                style={{ marginRight: 15 }}
-              />
-            </TouchableOpacity>
-          ),
+    <View style={{ flex: 1 }}>
+      <Tabs
+        screenOptions={{
+          headerStyle: {
+            backgroundColor: "#0F1723",
+            borderBottomWidth: 0,
+          },
+          headerTitle: "",
+          headerTransparent: true,
+          headerShadowVisible: false,
         }}
+        tabBar={(props) => {
+          const { state, navigation } = props;
+          const routeName = state.routes[state.index].name;
+          const routeToTabMap: Record<string, string> = {
+            index: "home",
+            Calender: "calendar",
+            Profile: "Profile",
+            Setting: "Setting",
+          };
+          const activeTab = routeToTabMap[routeName] || "home";
+
+          const handleTabPress = (tabName: string) => {
+            const targetRoute = tabName === "home" ? "index" : "Calender";
+            navigation.navigate(targetRoute);
+          };
+
+          return (
+            <BottomTabBar
+              activeTab={activeTab}
+              onTabPress={handleTabPress}
+              onAddPress={() => setIsAddModalVisible(true)}
+              bottomInset={0}
+              isHidden={false}
+            />
+          );
+        }}
+      >
+        <Tabs.Screen
+          name="index"
+          options={({ navigation }) => ({
+            headerShown: true,
+            headerLeft: () => (
+              <TouchableOpacity onPress={() => navigation.navigate("Setting")}>
+                <Ionicons
+                  name="settings-outline"
+                  size={24}
+                  color="white"
+                  style={{ marginLeft: 15 }}
+                />
+              </TouchableOpacity>
+            ),
+            headerRight: () => (
+              <TouchableOpacity onPress={() => navigation.navigate("Profile")}>
+                <Ionicons
+                  name="person-outline"
+                  size={24}
+                  color="white"
+                  style={{ marginRight: 15 }}
+                />
+              </TouchableOpacity>
+            ),
+          })}
+        />
+        <Tabs.Screen
+          name="Calender"
+          options={{
+            headerShown: true,
+            headerLeft: () => (
+              <TouchableOpacity
+                onPress={() => console.log("Navigate to Calender")}
+              >
+                <Ionicons
+                  name="settings-outline"
+                  size={24}
+                  color="white"
+                  style={{ marginLeft: 15 }}
+                />
+              </TouchableOpacity>
+            ),
+            headerRight: () => (
+              <TouchableOpacity
+                onPress={() => console.log("Navigate to Profile")}
+              >
+                <Ionicons
+                  name="person-outline"
+                  size={24}
+                  color="white"
+                  style={{ marginRight: 15 }}
+                />
+              </TouchableOpacity>
+            ),
+          }}
+        />
+      </Tabs>
+
+      <AddSubscriptionModal
+        visible={isAddModalVisible}
+        onDismiss={() => setIsAddModalVisible(false)}
+        onEmailScan={() => console.log("Email scan pressed")}
+        onDocumentUpload={() => console.log("Document upload pressed")}
       />
-    </Tabs>
+    </View>
   );
 };
 

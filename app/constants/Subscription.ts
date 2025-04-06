@@ -2,7 +2,7 @@ export interface Subscription {
   id: string;
   name: string;
   icon: string;
-  logoKey?: string; // Added for consistent logo mapping
+  logo?: string; // Added for consistent logo mapping
   price: number;
   renewalDate: string;
   category: string;
@@ -16,7 +16,7 @@ export interface Subscription {
     lastUsed?: string; // Last time the subscription was accessed/used
     frequency?: string; // How often the subscription is used (e.g. "Daily", "Weekly")
   };
-  billingCycle?: "monthly" | "yearly"; // Track billing cycle type
+  billingCycle?: "monthly" | "yearly" | "quarterly"; // Track billing cycle type
   paymentMethod?: {
     type: string; // Card, PayPal, etc.
     lastFour?: string; // Last four digits if applicable
@@ -33,5 +33,7 @@ export interface SubscriptionModalProps {
   onPause: (subscription: Subscription) => void;
   onDelete: (subscription: Subscription) => void;
   onSave?: (updatedSub: Subscription) => void; // Maintained for backward compatibility
-  logoImages: Record<string, any>;
+  logoUrl: Record<string, any>;
 }
+
+export default Subscription;

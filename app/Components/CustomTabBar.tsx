@@ -30,13 +30,13 @@ const BottomTabBar: React.FC<BottomTabBarProps> = ({
           right: 0,
           bottom: 0,
           flexDirection: "row",
-          borderTopWidth: 1,
+          borderTopWidth: 0,
           borderTopColor: "rgba(255,255,255,0.1)",
           backgroundColor: "rgba(15, 23, 35, 0.98)",
         },
         {
           paddingBottom: Platform.OS === "ios" ? bottomInset + 8 : 10,
-          height: Platform.OS === "ios" ? 68 + bottomInset : 70,
+          height: Platform.OS === "ios" ? 80 + bottomInset : 70,
         },
       ]}
     >
@@ -46,7 +46,7 @@ const BottomTabBar: React.FC<BottomTabBarProps> = ({
           flex: 1,
           alignItems: "center",
           justifyContent: "center",
-          paddingTop: 8,
+          paddingTop: 0,
         }}
         onPress={() => onTabPress("home")}
         accessibilityRole="tab"
@@ -131,7 +131,7 @@ const BottomTabBar: React.FC<BottomTabBarProps> = ({
           flex: 1,
           alignItems: "center",
           justifyContent: "center",
-          paddingTop: 8,
+          paddingTop: 0,
         }}
         onPress={() => onTabPress("calendar")}
         accessibilityRole="tab"
