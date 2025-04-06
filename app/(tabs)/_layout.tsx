@@ -82,7 +82,7 @@ const _layout = () => {
           headerShown: true,
           headerLeft: () => (
             <TouchableOpacity
-              onPress={() => console.log("Navigate to Settings")}
+              onPress={() => console.log("Navigate to Calender")}
             >
               <Ionicons
                 name="settings-outline"

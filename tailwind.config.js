@@ -7,6 +7,7 @@ module.exports = {
     extend: {
       colors: {
         primary: "rgba(18, 28, 41, 1)",
+        secondary: "rgba(110, 130, 140, 1)", // Used for secondary buttons
         primaryGradient: {
           colors: [
             "rgba(18, 28, 41, 1)", // Color(red: 0.07, green: 0.11, blue: 0.16)
@@ -14,15 +15,11 @@ module.exports = {
           ],
           locations: [0.0, 1.0],
         },
-        brandBlue: "#4D8EAF", // PACE text color
+        brandBlue: "#3A6D8E", // PACE text color
         brandBlueGradient: {
-          colors: [
-            "#3A6D8E", // Darker brand blue
-            "#4D8EAF", // Main brand blue
-          ],
+          colors: ["#3A6D8E", "#4D8EAF"],
           locations: [0.0, 1.0],
         },
-        secondary: "rgba(110, 130, 140, 1)", // Used for secondary buttons
 
         // Background colors
         backgroundGradientStart: "rgba(0, 15, 36, 1)",
