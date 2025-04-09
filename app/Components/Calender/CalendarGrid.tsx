@@ -5,7 +5,7 @@ import Animated, { FadeIn, Layout } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DateObject, Subscription } from "./types";
 import { getDatesForMonth } from "./utils";
-import { DateCell, CellMeasurement } from "./DateCell";
+import DateCell, { CellMeasurement } from "./DateCell";
 import { MonthNavigator } from "./MonthNavigator";
 import { DayHeaders } from "./DayHeaders";
 import "nativewind";
@@ -61,30 +61,26 @@ const CalendarGrid = ({
     [currentMonthYear]
   );
 
-  const cellSize = (width - insets.left - insets.right - 32) / 7;
+  // Calculate cell size based on available width, accounting for padding and insets
+  const cellSize = useMemo(() => {
+    const availableWidth = width - insets.left - insets.right - 32; // 32 for padding
+    return Math.floor(availableWidth / 7);
+  }, [width, insets]);
 
-  const handleHaptic = (type: "select" | "press") => {
+  const handleHaptic = useCallback((type: "select" | "press") => {
     const style =
       type === "select"
         ? Haptics.ImpactFeedbackStyle.Light
         : Haptics.ImpactFeedbackStyle.Medium;
     Haptics.impactAsync(style);
-  };
+  }, []);
 
-  const handleDatePress = useCallback(
-    (date: DateObject) => {
+  const handleNavigateMonth = useCallback(
+    (direction: "prev" | "next") => {
       handleHaptic("select");
-      onDatePress(date);
+      onNavigateMonth(direction);
     },
-    [onDatePress]
-  );
-
-  const handleDateLongPress = useCallback(
-    (date: DateObject, subs: Subscription[], measurement: CellMeasurement) => {
-      handleHaptic("press");
-      onDateLongPress?.(date, subs, measurement);
-    },
-    [onDateLongPress]
+    [handleHaptic, onNavigateMonth]
   );
 
   const renderDateCell = useCallback(
@@ -98,16 +94,26 @@ const CalendarGrid = ({
 
       return (
         <Animated.View
-          layout={Layout.duration(300)}
+          layout={Layout.duration(300).withCallback((finished) => {
+            if (finished) {
+              // Ensure proper layout after animation
+              gridRef.current?.scrollToOffset({ offset: 0, animated: true });
+            }
+          })}
           entering={FadeIn.duration(200)}
+          style={{
+            width: cellSize,
+            height: cellSize,
+            padding: 2,
+          }}
         >
           <DateCell
             dateObj={item}
             subscriptions={subscriptions}
-            cellSize={cellSize}
-            onDatePress={handleDatePress}
+            cellSize={cellSize - 4} // Account for padding
+            onDatePress={onDatePress}
             onSubscriptionPress={onSubscriptionPress}
-            onDateLongPress={handleDateLongPress}
+            onDateLongPress={onDateLongPress}
             isSelected={selectedDate?.dateString === item.dateString}
             isToday={isToday}
             isCurrentMonth={isCurrentMonth}
@@ -115,38 +121,50 @@ const CalendarGrid = ({
         </Animated.View>
       );
     },
-    [subscriptions, cellSize, selectedDate, today, currentMonthYear]
+    [
+      subscriptions,
+      cellSize,
+      selectedDate,
+      today,
+      currentMonthYear,
+      onDatePress,
+      onSubscriptionPress,
+      onDateLongPress,
+    ]
   );
 
+  const keyExtractor = useCallback((item: DateObject) => item.dateString, []);
+
   return (
-    <View className="flex-1 mb-4">
+    <View className="flex-1">
       <MonthNavigator
         currentDate={currentDate}
-        onNavigateMonth={(dir) => {
-          handleHaptic("select");
-          onNavigateMonth(dir);
-        }}
+        onNavigateMonth={handleNavigateMonth}
       />
 
-      <View className="bg-white/10 rounded-2xl overflow-hidden mb-4 p-2">
+      <View className="bg-white/10 rounded-2xl overflow-hidden p-4">
         <DayHeaders />
-        <View className="h-2" />
 
         <AnimatedFlatList
           ref={gridRef}
           data={dates}
           renderItem={renderDateCell}
-          keyExtractor={(item) => item.dateString}
+          keyExtractor={keyExtractor}
           numColumns={7}
           scrollEnabled={false}
-          accessibilityLabel="Calendar grid"
-          accessibilityRole="grid"
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}
           initialNumToRender={42}
           maxToRenderPerBatch={42}
           windowSize={42}
           removeClippedSubviews
-          ListFooterComponent={<View className="h-2" />}
-          contentContainerStyle={{ paddingHorizontal: insets.left }}
+          contentContainerStyle={{
+            paddingHorizontal: insets.left,
+            gap: 4,
+          }}
+          columnWrapperStyle={{
+            gap: 4,
+          }}
         />
       </View>
     </View>

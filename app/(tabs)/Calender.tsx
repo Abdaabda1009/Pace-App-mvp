@@ -1,50 +1,58 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 
-import { DateObject, Subscription } from "../Components/Calender";
+import { DateObject, Subscription } from "../Components/Calender/types";
 import { MonthNavigator } from "../Components/Calender/MonthNavigator";
 import { DayHeaders } from "../Components/Calender/DayHeaders";
-import  CalendarGrid  from "../Components/Calender/CalendarGrid";
+import CalendarGrid from "../Components/Calender/CalendarGrid";
 
-interface CalendarProps {
-  currentDate: Date;
-  onNavigateMonth: (direction: "prev" | "next") => void;
-  subscriptions: Subscription[];
-  selectedDate: DateObject | null;
-  onDatePress: (date: DateObject) => void;
-  onSubscriptionPress: (subscription: Subscription) => void;
-  onDateLongPress?: (
-    date: DateObject,
-    dateSubscriptions: Subscription[]
-  ) => void;
-}
+const Calender = () => {
+  // Initialize with current date
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<DateObject | null>(null);
 
-export const Calendar = ({
-  currentDate,
-  onNavigateMonth,
-  subscriptions,
-  selectedDate,
-  onDatePress,
-  onSubscriptionPress,
-  onDateLongPress,
-}: CalendarProps) => {
-  const handleMonthNavigation = useCallback(
+  // Mock subscriptions data - replace with actual data
+  const [subscriptions] = useState<Subscription[]>([]);
+
+  const handleNavigateMonth = useCallback(
     (direction: "prev" | "next") => {
-      Haptics.selectionAsync();
-      onNavigateMonth(direction);
+      const newDate = new Date(currentDate);
+      if (direction === "prev") {
+        newDate.setMonth(newDate.getMonth() - 1);
+      } else {
+        newDate.setMonth(newDate.getMonth() + 1);
+      }
+      setCurrentDate(newDate);
     },
-    [onNavigateMonth]
+    [currentDate]
+  );
+
+  const handleDatePress = useCallback((date: DateObject) => {
+    setSelectedDate(date);
+  }, []);
+
+  const handleSubscriptionPress = useCallback((subscription: Subscription) => {
+    // Handle subscription press
+    console.log("Subscription pressed:", subscription);
+  }, []);
+
+  const handleDateLongPress = useCallback(
+    (date: DateObject, dateSubscriptions: Subscription[]) => {
+      // Handle date long press
+      console.log("Date long pressed:", date, dateSubscriptions);
+    },
+    []
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView className="flex-1 bg-primary">
       <View className="mb-4 px-4">
         {/* Month Navigator */}
         <MonthNavigator
           currentDate={currentDate}
-          onNavigateMonth={handleMonthNavigation}
+          onNavigateMonth={handleNavigateMonth}
         />
 
         {/* Calendar */}
@@ -53,12 +61,12 @@ export const Calendar = ({
           <View className="h-2" />
           <CalendarGrid
             currentDate={currentDate}
-            onNavigateMonth={onNavigateMonth}
+            onNavigateMonth={handleNavigateMonth}
             subscriptions={subscriptions}
             selectedDate={selectedDate}
-            onDatePress={onDatePress}
-            onSubscriptionPress={onSubscriptionPress}
-            onDateLongPress={onDateLongPress}
+            onDatePress={handleDatePress}
+            onSubscriptionPress={handleSubscriptionPress}
+            onDateLongPress={handleDateLongPress}
           />
         </View>
       </View>
@@ -66,4 +74,4 @@ export const Calendar = ({
   );
 };
 
-export default Calendar;
+export default Calender;

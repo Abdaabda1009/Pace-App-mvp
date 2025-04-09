@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { formatMonthYear } from "./utils";
-import { Haptics } from "expo-haptics";
+import * as Haptics from "expo-haptics";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -10,7 +10,6 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import "nativewind";
-
 
 interface MonthNavigatorProps {
   currentDate: Date;
@@ -74,3 +73,5 @@ export const MonthNavigator = ({
     </Animated.View>
   );
 };
+
+export default MonthNavigator;

@@ -160,7 +160,7 @@ export const SubscriptionPopover = ({
                     style={tw`flex-row items-center p-4 border-b border-white/10 active:bg-white/5`}
                   >
                     <Image
-                      source={logoImages[item.icon] || logoImages["Google"]}
+                      source={logoImages[item.icon as keyof typeof logoImages] || logoImages["Google"]}
                       style={tw`w-8 h-8 rounded-full`}
                     />
                     <View style={tw`ml-4 flex-1`}>
@@ -206,3 +206,5 @@ export const SubscriptionPopover = ({
     </Modal>
   );
 };
+
+export default SubscriptionPopover;

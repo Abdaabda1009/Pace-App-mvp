@@ -16,4 +16,4 @@ export interface DateObject {
   year: number;
   isCurrentMonth: boolean;
   dateString: string; // YYYY-MM-DD format
-} 
+}

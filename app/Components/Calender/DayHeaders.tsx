@@ -17,3 +17,5 @@ export const DayHeaders = () => {
     </View>
   );
 };
+
+export default DayHeaders;
