@@ -43,7 +43,7 @@ export const MonthNavigator = ({
       style={{ paddingTop: insets.top }}
     >
       <TouchableOpacity
-        className="p-2 rounded-2xl bg-white/5 active:bg-white/10"
+        className="p-2 right-4 rounded-2xl bg-white/5 active:bg-white/10"
         onPress={() => handlePress("prev")}
         accessibilityLabel="Previous month"
         accessibilityHint="Double tap to navigate to the previous month"
@@ -62,7 +62,7 @@ export const MonthNavigator = ({
       </Animated.Text>
 
       <TouchableOpacity
-        className="p-2 rounded-2xl bg-white/5 active:bg-white/10"
+        className="p-2 left-4 rounded-2xl bg-white/5 active:bg-white/10"
         onPress={() => handlePress("next")}
         accessibilityLabel="Next month"
         accessibilityHint="Double tap to navigate to the next month"

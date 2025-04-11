@@ -176,3 +176,4 @@ export const useProfile = () => {
   }
   return context;
 };
+export default ProfileContext;

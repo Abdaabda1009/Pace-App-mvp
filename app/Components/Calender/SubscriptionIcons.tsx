@@ -73,7 +73,7 @@ export const SubscriptionIcons = ({
                 transform: [{ scale: scaleAnim }],
               }}
             >
-              <Text className="text-[7px] text-text-light font-bold text-center">
+              <Text className="text-[7px] text-text-black font-bold text-center">
                 +{additionalCount}
               </Text>
             </Animated.View>

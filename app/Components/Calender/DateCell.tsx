@@ -121,12 +121,17 @@ const DateCell = React.memo(
       }
     }, [dateObj, dateSubscriptions, hasSubscriptions, onDateLongPress]);
 
+    
+
     return (
       <Animated.View
         style={{
           width: cellSize,
           height: cellSize,
+          minWidth: 40, // Ensure minimum visible size
+          minHeight: 55,
           transform: [{ scale: scaleAnim }],
+          padding: 1,
         }}
       >
         <TouchableOpacity
@@ -136,12 +141,12 @@ const DateCell = React.memo(
           onLongPress={handleLongPress}
           delayLongPress={500}
           className={`
-            flex-1 items-center justify-center
-            ${!isCurrentMonth ? "opacity-40" : ""}
-            ${isSelected ? "bg-primary/20" : "bg-white/5"}
-            ${isToday ? "border-2 border-primary" : ""}
-            rounded-lg
-          `}
+  flex-1 items-center justify-center
+  ${!isCurrentMonth ? "opacity-40" : ""}
+  ${isSelected ? "bg-white/20" : "bg-primary"} // Changed from 'bg-white/5'
+  ${isToday ? "border-2 border-white/20" : ""}
+  rounded-lg
+`}
           accessibilityLabel={dateLabel}
           accessibilityHint={subscriptionsLabel}
           accessibilityRole="button"
@@ -150,10 +155,12 @@ const DateCell = React.memo(
           <View className="flex-1 w-full items-center">
             <Text
               className={`
-                text-base font-medium pt-1
-                ${!isCurrentMonth ? "text-gray-500" : "text-white"}
-                ${isToday ? "text-primary font-bold" : ""}
-              `}
+    text-base font-medium pt-1
+    ${
+      !isCurrentMonth ? "text-white" : "text-white"
+    } // Changed from 'text-white'
+    ${isToday ? "text-primary font-bold" : ""}
+  `}
             >
               {dateObj.day}
             </Text>
@@ -171,7 +178,7 @@ const DateCell = React.memo(
 
             {hasMultipleSubscriptions && (
               <Animated.View
-                className="absolute bottom-0 w-2 h-1 bg-primary rounded-full"
+                className="absolute bottom-0 w-2 h-1 bg-primary text-white rounded-full"
                 style={{ opacity: hintOpacity }}
               />
             )}

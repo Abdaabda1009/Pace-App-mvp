@@ -9,7 +9,7 @@ export const EmptyDateState = () => {
       className="items-center justify-center h-4"
       accessibilityLabel="No subscriptions for this date"
     >
-      <Ionicons name="calendar-clear-outline" size={12} color="#ffffff33" />
+      <Ionicons name="calendar-clear-outline" size={12} color="#fffff" />
     </View>
   );
 };

@@ -1,14 +1,23 @@
-import React, { useMemo, useCallback, useRef } from "react";
-import { View, FlatList, useWindowDimensions } from "react-native";
+import React, { useMemo, useCallback, useRef, useState } from "react";
+import {
+  View,
+  FlatList,
+  useWindowDimensions,
+  TouchableOpacity,
+  Text,
+  Image,
+  ScrollView,
+} from "react-native";
 import * as Haptics from "expo-haptics";
 import Animated, { FadeIn, Layout } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DateObject, Subscription } from "./types";
-import { getDatesForMonth } from "./utils";
+import { getDatesForMonth, getSubscriptionsForDate } from "./utils";
 import DateCell, { CellMeasurement } from "./DateCell";
 import { MonthNavigator } from "./MonthNavigator";
 import { DayHeaders } from "./DayHeaders";
 import "nativewind";
+import { Ionicons } from "@expo/vector-icons";
 
 interface CalendarGridProps {
   currentDate: Date;
@@ -35,6 +44,7 @@ const CalendarGrid = ({
   onSubscriptionPress,
   onDateLongPress,
 }: CalendarGridProps) => {
+  const [showAgenda, setShowAgenda] = useState(false);
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const gridRef = useRef<FlatList>(null);
@@ -63,7 +73,7 @@ const CalendarGrid = ({
 
   // Calculate cell size based on available width, accounting for padding and insets
   const cellSize = useMemo(() => {
-    const availableWidth = width - insets.left - insets.right - 32; // 32 for padding
+    const availableWidth = width - insets.left - insets.right - 32; // 32 for horizontal padding
     return Math.floor(availableWidth / 7);
   }, [width, insets]);
 
@@ -136,38 +146,136 @@ const CalendarGrid = ({
   const keyExtractor = useCallback((item: DateObject) => item.dateString, []);
 
   return (
-    <View className="flex-1">
-      <MonthNavigator
-        currentDate={currentDate}
-        onNavigateMonth={handleNavigateMonth}
+    <View className="flex-1 gap-2">
+      <DayHeaders />
+      <AnimatedFlatList
+        ref={gridRef}
+        data={dates}
+        renderItem={renderDateCell}
+        keyExtractor={keyExtractor}
+        numColumns={7}
+        scrollEnabled={false}
+        contentContainerStyle={{
+          padding: 4,
+          gap: 4,
+        }}
+        columnWrapperStyle={{
+          gap: 0,
+        }}
       />
-
-      <View className="bg-white/10 rounded-2xl overflow-hidden p-4">
-        <DayHeaders />
-
-        <AnimatedFlatList
-          ref={gridRef}
-          data={dates}
-          renderItem={renderDateCell}
-          keyExtractor={keyExtractor}
-          numColumns={7}
-          scrollEnabled={false}
-          showsVerticalScrollIndicator={false}
-          showsHorizontalScrollIndicator={false}
-          initialNumToRender={42}
-          maxToRenderPerBatch={42}
-          windowSize={42}
-          removeClippedSubviews
-          contentContainerStyle={{
-            paddingHorizontal: insets.left,
-            gap: 4,
-          }}
-          columnWrapperStyle={{
-            gap: 4,
-          }}
-        />
-      </View>
     </View>
+  );
+};
+
+const AgendaView = ({
+  dates,
+  subscriptions,
+  onSubscriptionPress,
+}: {
+  dates: DateObject[];
+  subscriptions: Subscription[];
+  onSubscriptionPress: (subscription: Subscription) => void;
+}) => {
+  const groupedSubscriptions = useMemo(() => {
+    const groups: { [key: string]: Subscription[] } = {};
+    dates.forEach((date) => {
+      const dateSubscriptions = getSubscriptionsForDate(
+        subscriptions,
+        date.dateString
+      );
+      if (dateSubscriptions.length > 0) {
+        groups[date.dateString] = dateSubscriptions;
+      }
+    });
+    return groups;
+  }, [dates, subscriptions]);
+
+  const renderSubscriptionItem = (
+    subscription: Subscription,
+    index: number,
+    total: number
+  ) => {
+    if (index >= 2) return null;
+    if (index === 1 && total > 2) {
+      return (
+        <View
+          key="more"
+          className="w-8 h-8 rounded-full items-center justify-center mr-3 bg-white/10"
+        >
+          <Text className="text-white text-xs font-bold">1+</Text>
+        </View>
+      );
+    }
+    return (
+      <TouchableOpacity
+        key={subscription.id}
+        onPress={() => onSubscriptionPress(subscription)}
+        className="w-8 h-8 rounded-full items-center justify-center mr-3"
+        style={{ backgroundColor: subscription.color }}
+      >
+        <Ionicons name={subscription.icon as any} size={20} color="white" />
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <ScrollView className="flex-1">
+      {Object.entries(groupedSubscriptions).map(
+        ([dateString, dateSubscriptions]) => {
+          const date = new Date(dateString);
+          return (
+            <View key={dateString} className="border-b border-white/10 p-4">
+              <View className="flex-row justify-between items-center mb-2">
+                <Text className="text-lg font-semibold text-white">
+                  {date.toLocaleDateString("en-US", {
+                    weekday: "long",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </Text>
+                <View className="flex-row">
+                  {dateSubscriptions.map((subscription, index) =>
+                    renderSubscriptionItem(
+                      subscription,
+                      index,
+                      dateSubscriptions.length
+                    )
+                  )}
+                </View>
+              </View>
+              <View className="space-y-2">
+                {dateSubscriptions.map((subscription) => (
+                  <TouchableOpacity
+                    key={subscription.id}
+                    onPress={() => onSubscriptionPress(subscription)}
+                    className="flex-row items-center bg-white/5 p-3 rounded-lg"
+                  >
+                    <View
+                      className="w-8 h-8 rounded-full items-center justify-center mr-3"
+                      style={{ backgroundColor: subscription.color }}
+                    >
+                      <Ionicons
+                        name={subscription.icon as any}
+                        size={20}
+                        color="white"
+                      />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-white font-medium">
+                        {subscription.name}
+                      </Text>
+                      <Text className="text-white/60 text-sm">
+                        ${subscription.price}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          );
+        }
+      )}
+    </ScrollView>
   );
 };
 
