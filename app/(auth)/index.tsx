@@ -155,17 +155,17 @@ export default function Auth() {
           name={icon}
           size={20}
           color="#9CA3AF"
-          className="absolute left-4 top-5 z-10"
+          className="absolute left-6 top-5 z-10"
         />
         <Text
-          className={`absolute left-4 text-xs text-white/80 z-10 ${
+          className={`absolute left-6 text-xs text-white/80 z-10 ${
             value || error ? "top-2" : "top-5"
           } transition-all duration-200`}
         >
           {label}
         </Text>
         <TextInput
-          className={`bg-white/15 text-white p-4 pl-12 rounded-lg border ${
+          className={`bg-white/15 text-white p-4 pl-14 rounded-lg border ${
             error ? "border-red-500" : "border-transparent"
           } ${value ? "pt-6 pb-2" : ""}`}
           placeholderTextColor="rgba(255, 255, 255, 0.5)"
