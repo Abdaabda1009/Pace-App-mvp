@@ -3,6 +3,7 @@ import "./global.css";
 import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import React from "react";
+import { ProfileProvider } from "./context/ProfileContext";
 
 export default function RootLayout() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -16,18 +17,20 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      {!isAuthenticated ? (
-        <Stack.Screen name="(auth)/index" />
-      ) : (
-        <>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="Subscription/[id]"
-            options={{ headerShown: false }}
-          />
-        </>
-      )}
-    </Stack>
+    <ProfileProvider>
+      <Stack screenOptions={{ headerShown: false }}>
+        {!isAuthenticated ? (
+          <Stack.Screen name="(auth)/index" />
+        ) : (
+          <>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="Subscription/[id]"
+              options={{ headerShown: false }}
+            />
+          </>
+        )}
+      </Stack>
+    </ProfileProvider>
   );
 }

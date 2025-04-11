@@ -5,27 +5,28 @@ import {
   Image,
   ScrollView,
   Alert,
+  ActivityIndicator,
+  TextInput,
 } from "react-native";
-import React from "react";
+import React, { useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
+import { useProfile } from "../context/ProfileContext";
+import { supabase } from "../utils/supabase";
 
 const Profile = () => {
-  // Mock user data - replace with actual user data
-  const user = {
-    name: "John Doe",
-    email: "john.doe@example.com",
-    subscriptionCount: 5,
-    totalMonthly: 49.99,
-    memberSince: "January 2024",
-  };
+  const { profile, loading, error, updateProfile, refreshProfile } =
+    useProfile();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValues, setEditValues] = useState({
+    full_name: profile?.full_name || "",
+    phone: profile?.phone || "",
+  });
 
-  const handleLogout = () => {
-    // Provide haptic feedback
+  const handleLogout = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    // Ask for confirmation
     Alert.alert(
       "Logout",
       "Are you sure you want to logout?",
@@ -37,18 +38,84 @@ const Profile = () => {
         {
           text: "Logout",
           style: "destructive",
-          onPress: () => {
-            // TODO: Implement actual logout logic like clearing tokens/session
-            // Clear user session/token/data here
-
-            // Navigate to auth screen
-            router.replace("/(auth)/index");
+          onPress: async () => {
+            try {
+              await supabase.auth.signOut();
+              router.replace("//(auth)/index");
+            } catch (error) {
+              console.error("Error during logout:", error);
+              Alert.alert("Error", "Failed to logout. Please try again.");
+            }
           },
         },
       ],
       { cancelable: true }
     );
   };
+
+  const handleEdit = () => {
+    setIsEditing(true);
+    setEditValues({
+      full_name: profile?.full_name || "",
+      phone: profile?.phone || "",
+    });
+  };
+
+  const handleSave = async () => {
+    try {
+      await updateProfile(editValues);
+      setIsEditing(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      Alert.alert("Error", "Failed to update profile. Please try again.");
+    }
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setEditValues({
+      full_name: profile?.full_name || "",
+      phone: profile?.phone || "",
+    });
+  };
+
+  if (loading) {
+    return (
+      <View className="flex-1 bg-primary items-center justify-center">
+        <ActivityIndicator size="large" color="#6366F1" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View className="flex-1 bg-primary items-center justify-center p-4">
+        <Text className="text-red-500 text-center mb-4">{error}</Text>
+        <TouchableOpacity
+          className="bg-accent px-4 py-2 rounded-lg"
+          onPress={refreshProfile}
+        >
+          <Text className="text-white">Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <View className="flex-1 bg-primary items-center justify-center p-4">
+        <Text className="text-white text-center mb-4">
+          No profile data available
+        </Text>
+        <TouchableOpacity
+          className="bg-accent px-4 py-2 rounded-lg"
+          onPress={refreshProfile}
+        >
+          <Text className="text-white">Refresh</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   const ProfileSection = ({
     title,
@@ -67,15 +134,29 @@ const Profile = () => {
     icon,
     label,
     value,
+    editable = false,
+    onChange,
   }: {
     icon: string;
     label: string;
     value: string;
+    editable?: boolean;
+    onChange?: (text: string) => void;
   }) => (
     <View className="flex-row items-center py-3 px-6 border-b border-gray-800">
       <Ionicons name={icon as any} size={20} color="white" />
       <Text className="text-white ml-4 flex-1">{label}</Text>
-      <Text className="text-gray-400">{value}</Text>
+      {editable && isEditing ? (
+        <TextInput
+          className="text-gray-400 flex-1 text-right"
+          value={value}
+          onChangeText={onChange}
+          placeholderTextColor="#6B7280"
+          keyboardType={label === "Phone" ? "phone-pad" : "default"}
+        />
+      ) : (
+        <Text className="text-gray-400">{value}</Text>
+      )}
     </View>
   );
 
@@ -85,85 +166,81 @@ const Profile = () => {
         {/* Profile Header */}
         <View className="items-center py-8">
           <View className="w-24 h-24 rounded-full bg-gray-700 items-center justify-center mb-4">
-            <Ionicons name="person" size={40} color="white" />
+            {profile.avatar_url ? (
+              <Image
+                source={{
+                  uri: supabase.storage
+                    .from("avatars")
+                    .getPublicUrl(profile.avatar_url).data.publicUrl,
+                }}
+                className="w-full h-full rounded-full"
+              />
+            ) : (
+              <Ionicons name="person" size={40} color="white" />
+            )}
           </View>
-          <Text className="text-white text-2xl font-bold">{user.name}</Text>
-          <Text className="text-gray-400 mt-1">{user.email}</Text>
+          <Text className="text-white text-2xl font-bold">
+            {profile.full_name}
+          </Text>
+          <Text className="text-gray-400 mt-1">{profile.email}</Text>
 
-          <TouchableOpacity className="mt-4 flex-row items-center">
-            <Text className="text-accent text-white mr-2">Edit Profile</Text>
-            <Ionicons name="pencil-outline" size={16} color="#6366F1" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Stats */}
-        <View className="flex-row justify-around py-4 border-y border-gray-800">
-          <View className="items-center">
-            <Text className="text-white text-xl font-bold">
-              {user.subscriptionCount}
-            </Text>
-            <Text className="text-gray-400 text-sm">Subscriptions</Text>
-          </View>
-          <View className="items-center">
-            <Text className="text-white text-xl font-bold">
-              ${user.totalMonthly}
-            </Text>
-            <Text className="text-gray-400 text-sm">Monthly</Text>
-          </View>
-          <View className="items-center">
-            <Text className="text-white text-xl font-bold">
-              {user.memberSince}
-            </Text>
-            <Text className="text-gray-400 text-sm">Member Since</Text>
-          </View>
+          {isEditing ? (
+            <View className="flex-row mt-4 space-x-4">
+              <TouchableOpacity
+                className="bg-green-500/20 px-4 py-2 rounded-lg flex-row items-center"
+                onPress={handleSave}
+              >
+                <Ionicons name="checkmark" size={16} color="#22C55E" />
+                <Text className="text-green-500 ml-2">Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="bg-red-500/20 px-4 py-2 rounded-lg flex-row items-center"
+                onPress={handleCancel}
+              >
+                <Ionicons name="close" size={16} color="#EF4444" />
+                <Text className="text-red-500 ml-2">Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              className="mt-4 flex-row items-center"
+              onPress={handleEdit}
+            >
+              <Text className="text-accent text-white mr-2">Edit Profile</Text>
+              <Ionicons name="pencil-outline" size={16} color="#6366F1" />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Account Information */}
         <ProfileSection title="ACCOUNT INFORMATION">
-          <ProfileItem icon="mail-outline" label="Email" value={user.email} />
+          <ProfileItem
+            icon="person-outline"
+            label="Full Name"
+            value={isEditing ? editValues.full_name : profile.full_name}
+            editable={isEditing}
+            onChange={(text) =>
+              setEditValues((prev) => ({ ...prev, full_name: text }))
+            }
+          />
+          <ProfileItem
+            icon="mail-outline"
+            label="Email"
+            value={profile.email}
+          />
+          <ProfileItem
+            icon="call-outline"
+            label="Phone"
+            value={isEditing ? editValues.phone : profile.phone}
+            editable={isEditing}
+            onChange={(text) =>
+              setEditValues((prev) => ({ ...prev, phone: text }))
+            }
+          />
           <ProfileItem
             icon="calendar-outline"
             label="Member Since"
-            value={user.memberSince}
-          />
-          <ProfileItem
-            icon="card-outline"
-            label="Payment Method"
-            value="•••• 4242"
-          />
-        </ProfileSection>
-
-        {/* Preferences */}
-        <ProfileSection title="PREFERENCES">
-          <ProfileItem
-            icon="notifications-outline"
-            label="Notifications"
-            value="On"
-          />
-          <ProfileItem
-            icon="language-outline"
-            label="Language"
-            value="English"
-          />
-          <ProfileItem icon="moon-outline" label="Dark Mode" value="On" />
-        </ProfileSection>
-
-        {/* Support */}
-        <ProfileSection title="SUPPORT">
-          <ProfileItem
-            icon="help-circle-outline"
-            label="Help Center"
-            value=""
-          />
-          <ProfileItem
-            icon="document-text-outline"
-            label="Terms of Service"
-            value=""
-          />
-          <ProfileItem
-            icon="shield-checkmark-outline"
-            label="Privacy Policy"
-            value=""
+            value={new Date(profile.created_at).toLocaleDateString()}
           />
         </ProfileSection>
 
