@@ -17,9 +17,17 @@ export default function RootLayout() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(auth)/index" />
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="Subscription/[id]" options={{ headerShown: false }} />
+      {!isAuthenticated ? (
+        <Stack.Screen name="(auth)/index" />
+      ) : (
+        <>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="Subscription/[id]"
+            options={{ headerShown: false }}
+          />
+        </>
+      )}
     </Stack>
   );
 }
