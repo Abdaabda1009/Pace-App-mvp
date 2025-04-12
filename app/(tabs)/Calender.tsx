@@ -80,15 +80,15 @@ const Calender = () => {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-primary mt-4">
-      <View className="flex-1 px-4 ">
+    <SafeAreaView className="flex-1 bg-light-primary dark:bg-primary mt-4">
+      <View className="flex-1 px-4">
         <MonthNavigator
           currentDate={currentDate}
           onNavigateMonth={handleNavigateMonth}
         />
 
         {/* Calendar Container */}
-        <View className="flex-1 bg-white/10 rounded-2xl overflow-hidden mb-4">
+        <View className="flex-1 bg-light-secondary dark:bg-secondary rounded-2xl overflow-hidden mb-4">
           <CalendarGrid
             currentDate={currentDate}
             onNavigateMonth={handleNavigateMonth}

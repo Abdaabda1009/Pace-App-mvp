@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, StatusBar } from "react-native";
 import React, { useState } from "react";
 import { Tabs, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -7,43 +7,27 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AddSubscriptionModal from "../Components/AddSubscriptionModal";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { NavigationProp } from "@react-navigation/native";
+import HeaderIcons from "../Components/HeaderIcons";
 
 const _layout = () => {
   const insets = useSafeAreaInsets();
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const router = useRouter();
 
-  const HeaderButtons = ({
-    navigation,
-  }: {
-    navigation: NavigationProp<any>;
-  }) => (
-    <View className="flex-row items-center justify-between w-full">
-      <TouchableOpacity onPress={() => navigation.navigate("Profile")}>
-        <Ionicons
-          name="person-outline"
-          size={24}
-          color="white"
-          style={{ marginLeft: -200 }}
-        />
-      </TouchableOpacity>
-      <TouchableOpacity onPress={() => navigation.navigate("Setting")}>
-        <Ionicons
-          name="settings-outline"
-          size={24}
-          color="white"
-          style={{ marginRight: 15 }}
-        />
-      </TouchableOpacity>
-    </View>
-  );
-
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1 }} className={isDarkMode ? "light" : ""}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
+
       <Tabs
         screenOptions={{
+          headerBackground: () => (
+            <View
+              className="bg-light-background dark:bg-primary"
+              style={{ flex: 1 }}
+            />
+          ),
           headerStyle: {
-            backgroundColor: "#0F1723",
             borderBottomWidth: 0,
           },
           headerTitle: "",
@@ -85,6 +69,8 @@ const _layout = () => {
               onAddPress={() => setIsAddModalVisible(true)}
               bottomInset={0}
               isHidden={false}
+              isDarkMode={isDarkMode}
+              toggleDarkMode={() => setIsDarkMode(!isDarkMode)}
             />
           );
         }}
@@ -93,14 +79,18 @@ const _layout = () => {
           name="index"
           options={({ navigation }: { navigation: NavigationProp<any> }) => ({
             headerShown: true,
-            headerRight: () => <HeaderButtons navigation={navigation} />,
+            headerRight: () => (
+              <HeaderIcons navigation={navigation} isDarkMode={isDarkMode} />
+            ),
           })}
         />
         <Tabs.Screen
           name="Calender"
           options={({ navigation }: { navigation: NavigationProp<any> }) => ({
             headerShown: true,
-            headerRight: () => <HeaderButtons navigation={navigation} />,
+            headerRight: () => (
+              <HeaderIcons navigation={navigation} isDarkMode={isDarkMode} />
+            ),
           })}
         />
         <Tabs.Screen
@@ -109,7 +99,7 @@ const _layout = () => {
             headerShown: true,
             headerTitle: "Profile",
             headerTitleStyle: {
-              color: "white",
+              color: isDarkMode ? "#FFFFFF" : "#000000",
               fontSize: 20,
               fontWeight: "bold",
             },
@@ -118,7 +108,7 @@ const _layout = () => {
                 <Ionicons
                   name="arrow-back"
                   size={24}
-                  color="white"
+                  color={isDarkMode ? "white" : "black"}
                   style={{ marginLeft: 15 }}
                 />
               </TouchableOpacity>
@@ -131,7 +121,7 @@ const _layout = () => {
             headerShown: true,
             headerTitle: "Settings",
             headerTitleStyle: {
-              color: "white",
+              color: isDarkMode ? "#FFFFFF" : "#000000",
               fontSize: 20,
               fontWeight: "bold",
             },
@@ -140,7 +130,7 @@ const _layout = () => {
                 <Ionicons
                   name="arrow-back"
                   size={24}
-                  color="white"
+                  color={isDarkMode ? "white" : "black"}
                   style={{ marginLeft: 15 }}
                 />
               </TouchableOpacity>
@@ -154,6 +144,7 @@ const _layout = () => {
         onDismiss={() => setIsAddModalVisible(false)}
         onEmailScan={() => console.log("Email scan pressed")}
         onDocumentUpload={() => console.log("Document upload pressed")}
+        isDarkMode={isDarkMode}
       />
     </View>
   );

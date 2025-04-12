@@ -17,9 +17,14 @@ import { Subscription } from "../constants/Subscription";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useNavigation } from "expo-router";
+import {
+  createSubscription,
+  NewSubscription,
+  PaymentMethod,
+} from "../utils/subscriptionLogic";
 
-const LOGO_API_SECRET_KEY = "sk_GH5uVjkPRGic2ZscGLV6Ag"; // Replace with your secret key
-const LOGO_API_PUBLIC_KEY = "pk_QxM7ndYgS-6UFUpHdOj_eQ"; // Replace with your public key
+const LOGO_API_SECRET_KEY = "sk_GH5uVjkPRGic2ZscGLV6Ag";
+const LOGO_API_PUBLIC_KEY = "pk_QxM7ndYgS-6UFUpHdOj_eQ";
 
 interface BrandResult {
   name: string;
@@ -39,16 +44,21 @@ const SubscriptionForm = ({
   isEditing = false,
 }: SubscriptionFormProps) => {
   const navigation = useNavigation();
-  const [formData, setFormData] = useState<Omit<Subscription, "id">>({
+  const [formData, setFormData] = useState<Omit<NewSubscription, "id">>({
     name: initialData?.name || "",
     price: initialData?.price || 0,
-    renewalDate: initialData?.renewalDate || "",
     category: initialData?.category || "streaming",
+    icon: initialData?.icon || "default",
     color: initialData?.color || "#3b82f6",
+    renewal_date:
+      initialData?.renewalDate || new Date().toISOString().split("T")[0],
+    billing_cycle: initialData?.billingCycle || "monthly",
+    payment_method: {
+      type: initialData?.paymentMethod?.type || "card",
+      lastFour: initialData?.paymentMethod?.lastFour || "",
+      expiryDate: initialData?.paymentMethod?.expiryDate || "",
+    },
     notes: initialData?.notes || "",
-    billingCycle: initialData?.billingCycle || "monthly",
-    paymentMethod: initialData?.paymentMethod || { type: "card" },
-    billingDate: initialData?.billingDate || "1",
     logo: initialData?.logo || null,
   });
 
@@ -96,12 +106,37 @@ const SubscriptionForm = ({
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
+
+    // Required fields validation
     if (!formData.name.trim()) newErrors.name = "Service name is required";
     if (formData.price <= 0) newErrors.price = "Please enter a valid price";
-    if (!formData.renewalDate)
-      newErrors.renewalDate = "Renewal date is required";
+    if (!formData.renewal_date)
+      newErrors.renewal_date = "Renewal date is required";
+    if (!formData.category) newErrors.category = "Category is required";
+    if (!formData.payment_method.type)
+      newErrors.payment_method = "Payment method is required";
+
+    // Price validation
+    if (isNaN(Number(formData.price))) {
+      newErrors.price = "Price must be a valid number";
+    }
+
+    // Date validation
+    if (formData.renewal_date) {
+      const renewalDate = new Date(formData.renewal_date);
+      if (isNaN(renewalDate.getTime())) {
+        newErrors.renewal_date = "Please enter a valid date";
+      }
+    }
+
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const isValid = Object.keys(newErrors).length === 0;
+
+    if (!isValid) {
+      console.log("Form validation failed:", newErrors);
+    }
+
+    return isValid;
   };
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
@@ -109,7 +144,7 @@ const SubscriptionForm = ({
     if (selectedDate) {
       setFormData({
         ...formData,
-        renewalDate: selectedDate.toISOString().split("T")[0],
+        renewal_date: selectedDate.toISOString().split("T")[0],
       });
     }
   };
@@ -139,38 +174,150 @@ const SubscriptionForm = ({
     if (validateForm()) {
       setIsSubmitting(true);
       try {
-        // Simulate API call delay
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        console.log("Starting subscription submission...");
 
-        onSubmit({
-          ...formData,
-          logo: logoUrl,
-        });
+        const newSubscription: NewSubscription = {
+          name: formData.name.trim(),
+          price: Number(formData.price),
+          category: formData.category,
+          icon: formData.icon,
+          color: formData.color,
+          renewal_date: formData.renewal_date,
+          billing_cycle: formData.billing_cycle,
+          payment_method: {
+            type: formData.payment_method.type,
+            lastFour: formData.payment_method.lastFour,
+            expiryDate: formData.payment_method.expiryDate,
+          },
+          notes: formData.notes.trim(),
+          logo: formData.logo,
+        };
 
-        if (!isEditing) {
-          Alert.alert("Success", "Subscription created successfully");
+        console.log("Prepared subscription data:", newSubscription);
+
+        // Show loading state
+        Alert.alert(
+          "Saving Subscription",
+          "Please wait while we save your subscription...",
+          [],
+          { cancelable: false }
+        );
+
+        const createdSubscription = await createSubscription(newSubscription);
+        console.log("Create subscription response:", createdSubscription);
+
+        if (createdSubscription) {
+          // Ensure the list is refreshed before showing success
+          setTimeout(() => {
+            Alert.alert(
+              "Success",
+              `${formData.name} subscription ${
+                isEditing ? "updated" : "created"
+              } successfully!`,
+              [
+                {
+                  text: "View Subscriptions",
+                  onPress: () => {
+                    // Navigate back to trigger a refresh
+                    navigation.goBack();
+                  },
+                },
+              ]
+            );
+          }, 1000); // Give database time to complete the write
         } else {
-          Alert.alert("Success", "Subscription updated successfully");
+          throw new Error("Failed to save subscription - no data returned");
         }
-      } catch (error) {
-        console.error("Error submitting form:", error);
-        Alert.alert("Error", "Something went wrong. Please try again.");
+      } catch (err) {
+        console.error("Form submission error:", err);
+
+        // Show detailed error message
+        const error = err as Error;
+        Alert.alert(
+          "Error",
+          `Failed to save subscription: ${
+            error?.message || "Unknown error"
+          }. Would you like to try again?`,
+          [
+            {
+              text: "Cancel",
+              style: "cancel",
+              onPress: () => navigation.goBack(),
+            },
+            {
+              text: "Try Again",
+              onPress: () => handleSubmit(),
+            },
+          ]
+        );
       } finally {
         setIsSubmitting(false);
       }
+    } else {
+      // Show validation errors
+      Alert.alert(
+        "Validation Error",
+        "Please check all required fields and try again.",
+        [{ text: "OK" }]
+      );
     }
   };
 
+  const handlePaymentMethodUpdate = (
+    field: keyof PaymentMethod,
+    value: string
+  ) => {
+    setFormData({
+      ...formData,
+      payment_method: {
+        ...formData.payment_method,
+        [field]: value,
+      },
+    });
+  };
+
   const categories = [
-    { id: "streaming", icon: "tv", label: "Streaming" },
-    { id: "software", icon: "laptop", label: "Software" },
-    { id: "fitness", icon: "fitness-center", label: "Fitness" },
-    { id: "food", icon: "fastfood", label: "Food" },
-    { id: "other", icon: "category", label: "Other" },
+    { id: "streaming", icon: "tv" as const, label: "Streaming" },
+    { id: "software", icon: "laptop" as const, label: "Software" },
+    { id: "fitness", icon: "fitness-center" as const, label: "Fitness" },
+    { id: "food", icon: "fastfood" as const, label: "Food" },
+    { id: "other", icon: "category" as const, label: "Other" },
   ];
 
+  const paymentMethods = [
+    { id: "card", icon: "card" as const },
+    { id: "paypal", icon: "logo-paypal" as const },
+    { id: "bank", icon: "business" as const },
+  ];
+
+  // Add visual feedback for submission state
+  const SubmitButton = () => (
+    <TouchableOpacity
+      className={`bg-brandBlue p-5 rounded-xl items-center 
+          shadow-lg shadow-brandBlue/30 ${
+            isSubmitting ? "opacity-70" : "active:scale-98"
+          } 
+          transition-all`}
+      onPress={handleSubmit}
+      disabled={isSubmitting}
+    >
+      {isSubmitting ? (
+        <View className="flex-row items-center">
+          <ActivityIndicator color="#fff" size="small" />
+          <Text className="text-white font-bold text-lg ml-2">
+            {isEditing ? "Updating..." : "Creating..."}
+          </Text>
+        </View>
+      ) : (
+        <Text className="text-white font-bold text-lg">
+          {isEditing ? "Update Subscription" : "Create Subscription"}
+        </Text>
+      )}
+    </TouchableOpacity>
+  );
+
   return (
-    <SafeAreaView className="flex-1 bg-primary dark:bg-gray-950">
+    <SafeAreaView className="flex-1 bg-light-primary dark:bg-primary">
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
@@ -180,9 +327,9 @@ const SubscriptionForm = ({
           contentContainerStyle={{ paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}
         >
-          <View className="p-4 mt-12 bg-primary dark:bg-gray-900 rounded-2xl shadow-xl shadow-black/30">
+          <View className="p-4 mt-12 bg-light-background dark:bg-gray-900 rounded-2xl shadow-xl shadow-black/30">
             <View className="flex-row justify-between items-center mb-6">
-              <Text className="text-textLight text-2xl font-bold">
+              <Text className="text-light-text dark:text-textLight text-2xl font-bold">
                 {isEditing ? "Edit Subscription" : "New Subscription"}
               </Text>
 
@@ -198,7 +345,7 @@ const SubscriptionForm = ({
 
             {/* Brand Search Section */}
             <View className="mb-5">
-              <Text className="text-textLight/80 mb-2 font-medium flex-row items-center">
+              <Text className="text-light-text/80 dark:text-textLight/80 mb-2 font-medium flex-row items-center">
                 <Ionicons
                   name="pricetag"
                   size={16}
@@ -209,8 +356,8 @@ const SubscriptionForm = ({
               </Text>
               <View className="relative">
                 <TextInput
-                  className="bg-secondary/20 dark:bg-gray-800 text-textLight p-4 rounded-xl 
-                      border border-secondary/30 focus:border-brandBlue focus:ring-2 focus:ring-brandBlue/50"
+                  className="bg-light-secondary/20 dark:bg-secondary/20 text-light-text dark:text-textLight p-4 rounded-xl 
+                      border border-light-secondary/30 dark:border-secondary/30 focus:border-brandBlue focus:ring-2 focus:ring-brandBlue/50"
                   placeholder="Netflix, Spotify, Adobe..."
                   placeholderTextColor="#6B7280"
                   value={formData.name}
@@ -233,12 +380,12 @@ const SubscriptionForm = ({
               )}
 
               {searchResults.length > 0 && (
-                <View className="mt-2 bg-secondary/20 dark:bg-gray-800 rounded-lg border border-secondary/30 max-h-56">
+                <View className="mt-2 bg-light-secondary/20 dark:bg-secondary/20 rounded-lg border border-light-secondary/30 dark:border-secondary/30 max-h-56">
                   <ScrollView nestedScrollEnabled={true}>
                     {searchResults.map((brand) => (
                       <TouchableOpacity
                         key={brand.domain}
-                        className="p-3 border-b border-secondary/30"
+                        className="p-3 border-b border-light-secondary/30 dark:border-secondary/30"
                         onPress={() => {
                           setFormData({ ...formData, name: brand.name });
                           setSearchResults([]);
@@ -255,8 +402,10 @@ const SubscriptionForm = ({
                             resizeMode="contain"
                           />
                           <View>
-                            <Text className="text-textLight">{brand.name}</Text>
-                            <Text className="text-textLight/50 text-xs">
+                            <Text className="text-light-text dark:text-textLight">
+                              {brand.name}
+                            </Text>
+                            <Text className="text-light-text/50 dark:text-textLight/50 text-xs">
                               {brand.domain}
                             </Text>
                           </View>
@@ -274,7 +423,9 @@ const SubscriptionForm = ({
                     className="w-10 h-10 rounded-lg mr-3"
                     resizeMode="contain"
                   />
-                  <Text className="text-textLight flex-1">{formData.name}</Text>
+                  <Text className="text-light-text dark:text-textLight flex-1">
+                    {formData.name}
+                  </Text>
                   <TouchableOpacity
                     onPress={() => setLogoUrl(null)}
                     className="p-2"
@@ -289,7 +440,7 @@ const SubscriptionForm = ({
                   <TouchableOpacity
                     onPress={() => Linking.openURL("https://logo.dev")}
                   >
-                    <Text className="text-textLight/50 text-xs">
+                    <Text className="text-light-text/50 dark:text-textLight/50 text-xs">
                       Logos provided by Logo.dev
                     </Text>
                   </TouchableOpacity>
@@ -300,7 +451,7 @@ const SubscriptionForm = ({
             {/* Price & Date Row */}
             <View className="flex-row gap-4 mb-5">
               <View className="flex-1">
-                <Text className="text-textLight/80 mb-2 font-medium flex-row items-center">
+                <Text className="text-light-text/80 dark:text-textLight/80 mb-2 font-medium flex-row items-center">
                   <Ionicons
                     name="cash"
                     size={16}
@@ -310,8 +461,8 @@ const SubscriptionForm = ({
                   <Text> Price</Text>
                 </Text>
                 <TextInput
-                  className="bg-secondary/20 dark:bg-gray-800 text-textLight p-4 rounded-xl 
-                      border border-secondary/30 focus:border-brandBlue focus:ring-2 focus:ring-brandBlue/50"
+                  className="bg-light-secondary/20 dark:bg-secondary/20 text-light-text dark:text-textLight p-4 rounded-xl 
+                      border border-light-secondary/30 dark:border-secondary/30 focus:border-brandBlue focus:ring-2 focus:ring-brandBlue/50"
                   placeholder="0.00"
                   placeholderTextColor="#6B7280"
                   keyboardType="numeric"
@@ -328,7 +479,7 @@ const SubscriptionForm = ({
               </View>
 
               <View className="flex-1">
-                <Text className="text-textLight/80 mb-2 font-medium flex-row items-center">
+                <Text className="text-light-text/80 dark:text-textLight/80 mb-2 font-medium flex-row items-center">
                   <Ionicons
                     name="calendar"
                     size={16}
@@ -338,25 +489,25 @@ const SubscriptionForm = ({
                   <Text> Next Billing</Text>
                 </Text>
                 <TouchableOpacity
-                  className="bg-secondary/20 dark:bg-gray-800 text-textLight p-4 rounded-xl 
-                      border border-secondary/30 focus:border-brandBlue focus:ring-2 focus:ring-brandBlue/50"
+                  className="bg-light-secondary/20 dark:bg-secondary/20 text-light-text dark:text-textLight p-4 rounded-xl 
+                      border border-light-secondary/30 dark:border-secondary/30 focus:border-brandBlue focus:ring-2 focus:ring-brandBlue/50"
                   onPress={() => setShowDatePicker(true)}
                 >
-                  <Text className="text-textLight">
-                    {formData.renewalDate || "Select date"}
+                  <Text className="text-light-text dark:text-textLight">
+                    {formData.renewal_date || "Select date"}
                   </Text>
                 </TouchableOpacity>
-                {errors.renewalDate && (
+                {errors.renewal_date && (
                   <Text className="text-red-500 text-sm mt-1">
-                    {errors.renewalDate}
+                    {errors.renewal_date}
                   </Text>
                 )}
 
                 {showDatePicker && (
                   <DateTimePicker
                     value={
-                      formData.renewalDate
-                        ? new Date(formData.renewalDate)
+                      formData.renewal_date
+                        ? new Date(formData.renewal_date)
                         : new Date()
                     }
                     mode="date"
@@ -369,7 +520,7 @@ const SubscriptionForm = ({
 
             {/* Category */}
             <View className="mb-6">
-              <Text className="text-textLight/80 mb-3 font-medium">
+              <Text className="text-light-text/80 dark:text-textLight/80 mb-3 font-medium">
                 Category
               </Text>
               <View className="flex flex-row flex-wrap gap-3">
@@ -380,7 +531,7 @@ const SubscriptionForm = ({
                         ${
                           formData.category === cat.id
                             ? "bg-brandBlue/90 border border-brandBlue"
-                            : "bg-secondary/20 dark:bg-gray-800 border border-secondary/30"
+                            : "bg-light-secondary/20 dark:bg-secondary/20 border border-light-secondary/30 dark:border-secondary/30"
                         }
                         active:scale-95 transition-all`}
                     onPress={() =>
@@ -396,7 +547,7 @@ const SubscriptionForm = ({
                       className={`ml-2 ${
                         formData.category === cat.id
                           ? "text-white font-semibold"
-                          : "text-textLight/80"
+                          : "text-light-text/80 dark:text-textLight/80"
                       }`}
                     >
                       {cat.label}
@@ -408,7 +559,7 @@ const SubscriptionForm = ({
 
             {/* Billing Cycle */}
             <View className="mb-6">
-              <Text className="text-textLight/80 mb-3 font-medium">
+              <Text className="text-light-text/80 dark:text-textLight/80 mb-3 font-medium">
                 Billing Cycle
               </Text>
               <View className="flex flex-row gap-3">
@@ -417,15 +568,15 @@ const SubscriptionForm = ({
                     key={cycle}
                     className={`flex-1 px-4 py-3 rounded-xl items-center
                         ${
-                          formData.billingCycle === cycle
+                          formData.billing_cycle === cycle
                             ? "bg-brandBlue/90 border border-brandBlue"
-                            : "bg-secondary/20 dark:bg-gray-800 border border-secondary/30"
+                            : "bg-light-secondary/20 dark:bg-secondary/20 border border-light-secondary/30 dark:border-secondary/30"
                         }
                         active:scale-95 transition-all`}
                     onPress={() =>
                       setFormData({
                         ...formData,
-                        billingCycle: cycle as
+                        billing_cycle: cycle as
                           | "monthly"
                           | "yearly"
                           | "quarterly",
@@ -434,9 +585,9 @@ const SubscriptionForm = ({
                   >
                     <Text
                       className={`capitalize ${
-                        formData.billingCycle === cycle
+                        formData.billing_cycle === cycle
                           ? "text-white font-semibold"
-                          : "text-textLight/80"
+                          : "text-light-text/80 dark:text-textLight/80"
                       }`}
                     >
                       {cycle}
@@ -448,48 +599,36 @@ const SubscriptionForm = ({
 
             {/* Payment Details */}
             <View className="mb-6">
-              <Text className="text-textLight/80 mb-3 font-medium">
+              <Text className="text-light-text/80 dark:text-textLight/80 mb-3 font-medium">
                 Payment Method
               </Text>
               <View className="flex flex-row gap-3 mb-4">
-                {[
-                  { id: "card", icon: "card" },
-                  { id: "paypal", icon: "logo-paypal" },
-                  { id: "bank", icon: "business" },
-                ].map((method) => (
+                {paymentMethods.map((method) => (
                   <TouchableOpacity
                     key={method.id}
                     className={`flex-1 px-4 py-3 rounded-xl flex-row justify-center items-center
                         ${
-                          formData.paymentMethod?.type === method.id
+                          formData.payment_method.type === method.id
                             ? "bg-brandBlue/90 border border-brandBlue"
-                            : "bg-secondary/20 dark:bg-gray-800 border border-secondary/30"
+                            : "bg-light-secondary/20 dark:bg-secondary/20 border border-light-secondary/30 dark:border-secondary/30"
                         }
                         active:scale-95 transition-all`}
-                    onPress={() =>
-                      setFormData({
-                        ...formData,
-                        paymentMethod: {
-                          ...formData.paymentMethod,
-                          type: method.id,
-                        },
-                      })
-                    }
+                    onPress={() => handlePaymentMethodUpdate("type", method.id)}
                   >
                     <Ionicons
                       name={method.icon}
                       size={18}
                       color={
-                        formData.paymentMethod?.type === method.id
+                        formData.payment_method.type === method.id
                           ? "#fff"
                           : "#6B7280"
                       }
                     />
                     <Text
                       className={`capitalize ml-2 ${
-                        formData.paymentMethod?.type === method.id
+                        formData.payment_method.type === method.id
                           ? "text-white font-semibold"
-                          : "text-textLight/80"
+                          : "text-light-text/80 dark:text-textLight/80"
                       }`}
                     >
                       {method.id}
@@ -498,45 +637,33 @@ const SubscriptionForm = ({
                 ))}
               </View>
 
-              {formData.paymentMethod?.type === "card" && (
+              {formData.payment_method.type === "card" && (
                 <View className="space-y-4">
                   <View>
-                    <Text className="text-textLight/80 mb-2 font-medium">
+                    <Text className="text-light-text/80 dark:text-textLight/80 mb-2 font-medium">
                       Card Details
                     </Text>
                     <View className="flex flex-row gap-3">
                       <TextInput
-                        className="bg-secondary/20 dark:bg-gray-800 text-textLight p-4 rounded-xl 
-                            border border-secondary/30 focus:border-brandBlue focus:ring-2 focus:ring-brandBlue/50 flex-1"
+                        className="bg-light-secondary/20 dark:bg-secondary/20 text-light-text dark:text-textLight p-4 rounded-xl 
+                            border border-light-secondary/30 dark:border-secondary/30 focus:border-brandBlue focus:ring-2 focus:ring-brandBlue/50 flex-1"
                         placeholder="Last 4 digits"
                         placeholderTextColor="#6B7280"
                         maxLength={4}
                         keyboardType="numeric"
-                        value={formData.paymentMethod?.lastFour}
+                        value={formData.payment_method.lastFour}
                         onChangeText={(text) =>
-                          setFormData({
-                            ...formData,
-                            paymentMethod: {
-                              ...formData.paymentMethod,
-                              lastFour: text,
-                            },
-                          })
+                          handlePaymentMethodUpdate("lastFour", text)
                         }
                       />
                       <TextInput
-                        className="bg-secondary/20 dark:bg-gray-800 text-textLight p-4 rounded-xl 
-                            border border-secondary/30 focus:border-brandBlue focus:ring-2 focus:ring-brandBlue/50 flex-1"
+                        className="bg-light-secondary/20 dark:bg-secondary/20 text-light-text dark:text-textLight p-4 rounded-xl 
+                            border border-light-secondary/30 dark:border-secondary/30 focus:border-brandBlue focus:ring-2 focus:ring-brandBlue/50 flex-1"
                         placeholder="MM/YY"
                         placeholderTextColor="#6B7280"
-                        value={formData.paymentMethod?.expiryDate}
+                        value={formData.payment_method.expiryDate}
                         onChangeText={(text) =>
-                          setFormData({
-                            ...formData,
-                            paymentMethod: {
-                              ...formData.paymentMethod,
-                              expiryDate: text,
-                            },
-                          })
+                          handlePaymentMethodUpdate("expiryDate", text)
                         }
                       />
                     </View>
@@ -551,7 +678,7 @@ const SubscriptionForm = ({
                 className="flex-row items-center mb-2"
                 onPress={() => setShowNotes(!showNotes)}
               >
-                <Text className="text-textLight/80 font-medium flex-1">
+                <Text className="text-light-text/80 dark:text-textLight/80 font-medium flex-1">
                   Notes
                 </Text>
                 <Ionicons
@@ -563,8 +690,8 @@ const SubscriptionForm = ({
 
               {showNotes && (
                 <TextInput
-                  className="bg-secondary/20 dark:bg-gray-800 text-textLight p-4 rounded-xl 
-                      border border-secondary/30 focus:border-brandBlue focus:ring-2 focus:ring-brandBlue/50"
+                  className="bg-light-secondary/20 dark:bg-secondary/20 text-light-text dark:text-textLight p-4 rounded-xl 
+                      border border-light-secondary/30 dark:border-secondary/30 focus:border-brandBlue focus:ring-2 focus:ring-brandBlue/50"
                   placeholder="Add any additional notes here..."
                   placeholderTextColor="#6B7280"
                   multiline
@@ -579,23 +706,9 @@ const SubscriptionForm = ({
             </View>
 
             {/* Submit Button */}
-            <TouchableOpacity
-              className={`bg-brandBlue p-5 rounded-xl items-center 
-                  shadow-lg shadow-brandBlue/30 ${
-                    isSubmitting ? "opacity-70" : "active:scale-98"
-                  } 
-                  transition-all`}
-              onPress={handleSubmit}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text className="text-white font-bold text-lg">
-                  {isEditing ? "Update Subscription" : "Create Subscription"}
-                </Text>
-              )}
-            </TouchableOpacity>
+            <View className="mt-6">
+              <SubmitButton />
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

@@ -2,11 +2,19 @@
 export interface Subscription {
   id: string;
   name: string;
-  icon: string;
   price: number;
-  renewalDate: string;
   category: string;
+  icon: string;
   color: string;
+  renewalDate: string;
+  billingCycle?: string;
+  paymentMethod?: {
+    type: string;
+    lastFour?: string;
+    expiryDate?: string;
+  };
+  notes?: string;
+  logo?: string | null;
 }
 
 // Date object interface for calendar grid

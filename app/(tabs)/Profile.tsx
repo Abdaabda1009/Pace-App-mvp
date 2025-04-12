@@ -81,18 +81,18 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <View className="flex-1 bg-primary items-center justify-center">
-        <ActivityIndicator size="large" color="#6366F1" />
+      <View className="flex-1 bg-light-background dark:bg-primary items-center justify-center">
+        <ActivityIndicator size="large" color="#3A6D8E" />
       </View>
     );
   }
 
   if (error) {
     return (
-      <View className="flex-1 bg-primary items-center justify-center p-4">
+      <View className="flex-1 bg-light-background dark:bg-primary items-center justify-center p-4">
         <Text className="text-red-500 text-center mb-4">{error}</Text>
         <TouchableOpacity
-          className="bg-accent px-4 py-2 rounded-lg"
+          className="bg-brandBlue px-4 py-2 rounded-lg"
           onPress={refreshProfile}
         >
           <Text className="text-white">Retry</Text>
@@ -103,12 +103,12 @@ const Profile = () => {
 
   if (!profile) {
     return (
-      <View className="flex-1 bg-primary items-center justify-center p-4">
-        <Text className="text-white text-center mb-4">
+      <View className="flex-1 bg-light-background dark:bg-primary items-center justify-center p-4">
+        <Text className="text-light-text dark:text-white text-center mb-4">
           No profile data available
         </Text>
         <TouchableOpacity
-          className="bg-accent px-4 py-2 rounded-lg"
+          className="bg-brandBlue px-4 py-2 rounded-lg"
           onPress={refreshProfile}
         >
           <Text className="text-white">Refresh</Text>
@@ -125,7 +125,9 @@ const Profile = () => {
     children: React.ReactNode;
   }) => (
     <View className="mb-6">
-      <Text className="text-gray-400 text-sm mb-2 px-6">{title}</Text>
+      <Text className="text-gray-500 dark:text-gray-400 text-sm mb-2 px-6">
+        {title}
+      </Text>
       {children}
     </View>
   );
@@ -143,29 +145,36 @@ const Profile = () => {
     editable?: boolean;
     onChange?: (text: string) => void;
   }) => (
-    <View className="flex-row items-center py-3 px-6 border-b border-gray-800">
-      <Ionicons name={icon as any} size={20} color="white" />
-      <Text className="text-white ml-4 flex-1">{label}</Text>
+    <View className="flex-row items-center py-3 px-6 border-b border-gray-200 dark:border-gray-800">
+      <Ionicons
+        name={icon as any}
+        size={20}
+        color="#3A6D8E"
+        className="dark:text-white"
+      />
+      <Text className="text-light-text dark:text-white ml-4 flex-1">
+        {label}
+      </Text>
       {editable && isEditing ? (
         <TextInput
-          className="text-gray-400 flex-1 text-right"
+          className="text-gray-600 dark:text-gray-400 flex-1 text-right"
           value={value}
           onChangeText={onChange}
           placeholderTextColor="#6B7280"
           keyboardType={label === "Phone" ? "phone-pad" : "default"}
         />
       ) : (
-        <Text className="text-gray-400">{value}</Text>
+        <Text className="text-gray-600 dark:text-gray-400">{value}</Text>
       )}
     </View>
   );
 
   return (
-    <View className="flex-1 bg-primary mt-24">
+    <View className="flex-1 bg-light-background dark:bg-primary mt-24">
       <ScrollView>
         {/* Profile Header */}
         <View className="items-center py-8">
-          <View className="w-24 h-24 rounded-full bg-gray-700 items-center justify-center mb-4">
+          <View className="w-24 h-24 rounded-full bg-gray-200 dark:bg-gray-700 items-center justify-center mb-4">
             {profile.avatar_url ? (
               <Image
                 source={{
@@ -176,13 +185,15 @@ const Profile = () => {
                 className="w-full h-full rounded-full"
               />
             ) : (
-              <Ionicons name="person" size={40} color="white" />
+              <Ionicons name="person" size={40} color="#3A6D8E" />
             )}
           </View>
-          <Text className="text-white text-2xl font-bold">
+          <Text className="text-light-text dark:text-white text-2xl font-bold">
             {profile.full_name}
           </Text>
-          <Text className="text-gray-400 mt-1">{profile.email}</Text>
+          <Text className="text-gray-600 dark:text-gray-400 mt-1">
+            {profile.email}
+          </Text>
 
           {isEditing ? (
             <View className="flex-row mt-4 space-x-4">
@@ -206,8 +217,8 @@ const Profile = () => {
               className="mt-4 flex-row items-center"
               onPress={handleEdit}
             >
-              <Text className="text-accent text-white mr-2">Edit Profile</Text>
-              <Ionicons name="pencil-outline" size={16} color="#6366F1" />
+              <Text className="text-brandBlue mr-2">Edit Profile</Text>
+              <Ionicons name="pencil-outline" size={16} color="#3A6D8E" />
             </TouchableOpacity>
           )}
         </View>

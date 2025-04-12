@@ -121,8 +121,6 @@ const DateCell = React.memo(
       }
     }, [dateObj, dateSubscriptions, hasSubscriptions, onDateLongPress]);
 
-    
-
     return (
       <Animated.View
         style={{

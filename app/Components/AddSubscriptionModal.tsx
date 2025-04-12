@@ -224,7 +224,7 @@ const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
       >
         <Animated.View
           ref={sheetRef}
-          className="w-full bg-white dark:bg-gray-900 rounded-t-2xl overflow-hidden max-h-[70vh]"
+          className="w-full bg-light-background dark:bg-primary rounded-t-3xl overflow-hidden max-h-[70vh] shadow-2xl shadow-black/30"
           style={[
             {
               transform: [{ translateY }],
@@ -234,17 +234,17 @@ const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
           {...panResponder.panHandlers}
           accessibilityViewIsModal
         >
-          <View className="p-6 pb-8">
-            <View className="w-14 h-1 bg-gray-400 dark:bg-gray-600 rounded-full self-center mb-6" />
+          <View className="p-2 pb-4">
+            <View className="w-14 h-1.5 bg-brandBlue/70 dark:bg-secondary rounded-full self-center mb-6 mt-2" />
 
             <Text
-              className="text-xl font-semibold text-gray-900 dark:text-white text-center mb-6"
+              className="text-xl font-bold text-light-text dark:text-textLight text-center mb-6"
               style={{ fontSize: getDynamicFontSize(20) }}
             >
               Add New Subscription
             </Text>
 
-            <View className="space-y-4 gap-4">
+            <View className="space-y-4 gap-6 px-4">
               {["emailScan", "manualEntry", "documentUpload"].map(
                 (action, index) => (
                   <Animated.View
@@ -260,7 +260,7 @@ const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
                   >
                     <TouchableOpacity
                       ref={index === 0 ? initialFocusRef : undefined}
-                      className="flex-row items-center p-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm"
+                      className="flex-row items-center p-5 bg-light-primary dark:bg-primaryGradient-colors-0 rounded-2xl shadow-sm shadow-brandBlue/10 dark:shadow-secondary/20"
                       onPress={() => {
                         Haptics.notificationAsync(
                           Haptics.NotificationFeedbackType.Success
@@ -283,7 +283,7 @@ const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
                       }
                       accessibilityRole="button"
                     >
-                      <View className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 items-center justify-center mr-4">
+                      <View className="w-14 h-14 rounded-xl bg-brandBlue/10 dark:bg-brandBlue/20 items-center justify-center mr-4">
                         <Ionicons
                           name={
                             [
@@ -292,14 +292,14 @@ const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
                               "document-outline",
                             ][index] as any
                           }
-                          size={30}
-                          className="text-blue-500 dark:text-blue-400"
+                          size={32}
+                          className="text-brandBlue dark:text-brandBlue/90"
                         />
                       </View>
 
                       <View className="flex-1">
                         <Text
-                          className="text-base font-semibold text-gray-900 dark:text-white"
+                          className="text-base font-semibold text-light-text dark:text-textLight"
                           style={{ fontSize: getDynamicFontSize(17) }}
                         >
                           {
@@ -311,7 +311,7 @@ const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
                           }
                         </Text>
                         <Text
-                          className="text-sm text-gray-500 dark:text-gray-400"
+                          className="text-sm text-gray-600 dark:text-secondary/80"
                           style={{ fontSize: getDynamicFontSize(13) }}
                         >
                           {
@@ -326,8 +326,8 @@ const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
 
                       <Ionicons
                         name="chevron-forward-outline"
-                        size={20}
-                        className="text-gray-400 dark:text-gray-500"
+                        size={24}
+                        className="text-brandBlue/70 dark:text-secondary/80"
                       />
                     </TouchableOpacity>
                   </Animated.View>
@@ -336,12 +336,12 @@ const AddSubscriptionModal: React.FC<AddSubscriptionModalProps> = ({
             </View>
 
             <TouchableOpacity
-              className="mt-6 py-3 bg-gray-100 dark:bg-gray-800 rounded-lg items-center"
+              className="mt-6 mx-4 py-4 bg-transparent dark:bg-secondary/10 rounded-xl items-center border border-brandBlue/30 dark:border-secondary/20"
               onPress={handleOutsideTap}
               accessibilityRole="button"
             >
               <Text
-                className="text-blue-500 font-medium"
+                className="text-brandBlue font-semibold dark:text-brandBlue/90"
                 style={{ fontSize: getDynamicFontSize(16) }}
               >
                 Cancel

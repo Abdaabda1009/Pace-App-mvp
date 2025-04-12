@@ -3,23 +3,41 @@ import { TouchableOpacity, Platform, View, Text } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useColorScheme } from "nativewind";
+import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 
-interface BottomTabBarProps {
+export interface CustomBottomTabBarProps extends BottomTabBarProps {
   activeTab: string;
   onTabPress: (tabName: string) => void;
   onAddPress: () => void;
-  bottomInset?: number;
-  isHidden?: boolean;
+  bottomInset: number;
+  isHidden: boolean;
+  isDarkMode: boolean;
+  toggleDarkMode: () => void;
 }
 
-const BottomTabBar: React.FC<BottomTabBarProps> = ({
+const BottomTabBar: React.FC<CustomBottomTabBarProps> = ({
   activeTab = "home",
   onTabPress,
   onAddPress,
   bottomInset = 0,
   isHidden = false,
+  isDarkMode,
+  toggleDarkMode,
 }) => {
   const router = useRouter();
+  const { colorScheme } = useColorScheme();
+
+  const inactiveIconColor =
+    colorScheme === "dark"
+      ? "rgba(255, 255, 255, 0.6)"
+      : "rgba(33, 43, 54, 0.6)";
+  const borderTopColor =
+    colorScheme === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)";
+  const backgroundColor =
+    colorScheme === "dark"
+      ? "rgba(15, 23, 35, 0.98)"
+      : "rgba(255, 255, 255, 0.98)";
 
   return (
     <View
@@ -31,8 +49,8 @@ const BottomTabBar: React.FC<BottomTabBarProps> = ({
           bottom: 0,
           flexDirection: "row",
           borderTopWidth: 0,
-          borderTopColor: "rgba(255,255,255,0.1)",
-          backgroundColor: "rgba(15, 23, 35, 0.98)",
+          borderTopColor,
+          backgroundColor,
         },
         {
           paddingBottom: Platform.OS === "ios" ? bottomInset + 8 : 10,
@@ -55,14 +73,14 @@ const BottomTabBar: React.FC<BottomTabBarProps> = ({
           <Ionicons
             name={activeTab === "home" ? "home" : "home-outline"}
             size={24}
-            color={activeTab === "home" ? "#3A6D8E" : "rgba(255,255,255,0.6)"}
+            color={activeTab === "home" ? "#3A6D8E" : inactiveIconColor}
           />
           <Text
             style={[
               { fontSize: 12, marginTop: 4, fontWeight: "500" },
               activeTab === "home"
                 ? { color: "#3A6D8E", fontWeight: "600" }
-                : { color: "rgba(255,255,255,0.6)" },
+                : { color: inactiveIconColor },
             ]}
           >
             Home
@@ -103,7 +121,10 @@ const BottomTabBar: React.FC<BottomTabBarProps> = ({
             alignItems: "center",
             justifyContent: "center",
             borderWidth: 2,
-            borderColor: "rgba(15, 23, 35, 0.98)",
+            borderColor:
+              colorScheme === "dark"
+                ? "rgba(15, 23, 35, 0.98)"
+                : "rgba(255, 255, 255, 0.98)",
             shadowColor: "#3A6D8E",
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.3,
@@ -117,7 +138,7 @@ const BottomTabBar: React.FC<BottomTabBarProps> = ({
           style={{
             fontSize: 12,
             fontWeight: "500",
-            color: "rgba(255,255,255,0.7)",
+            color: inactiveIconColor,
             marginTop: 4,
           }}
         >
@@ -140,16 +161,14 @@ const BottomTabBar: React.FC<BottomTabBarProps> = ({
           <Ionicons
             name={activeTab === "calendar" ? "calendar" : "calendar-outline"}
             size={24}
-            color={
-              activeTab === "calendar" ? "#3A6D8E" : "rgba(255,255,255,0.6)"
-            }
+            color={activeTab === "calendar" ? "#3A6D8E" : inactiveIconColor}
           />
           <Text
             style={[
               { fontSize: 12, marginTop: 4, fontWeight: "500" },
               activeTab === "calendar"
                 ? { color: "#3A6D8E", fontWeight: "600" }
-                : { color: "rgba(255,255,255,0.6)" },
+                : { color: inactiveIconColor },
             ]}
           >
             Calendar

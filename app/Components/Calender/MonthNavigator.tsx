@@ -43,17 +43,21 @@ export const MonthNavigator = ({
       style={{ paddingTop: insets.top }}
     >
       <TouchableOpacity
-        className="p-2 right-4 rounded-2xl bg-white/5 active:bg-white/10"
+        className="p-2 right-4 rounded-2xl bg-light-secondary/5 dark:bg-secondary/5 active:bg-light-secondary/10 dark:active:bg-secondary/10"
         onPress={() => handlePress("prev")}
         accessibilityLabel="Previous month"
         accessibilityHint="Double tap to navigate to the previous month"
         accessibilityRole="button"
       >
-        <Ionicons name="chevron-back" size={24} className="text-white" />
+        <Ionicons
+          name="chevron-back"
+          size={24}
+          className="text-brandBlue" // Brand color maintained
+        />
       </TouchableOpacity>
 
       <Animated.Text
-        className="text-2xl font-bold text-white"
+        className="text-2xl font-bold text-light-text dark:text-textLight"
         style={animatedStyle}
         accessibilityLabel={formatMonthYear(currentDate)}
         accessibilityRole="header"
@@ -62,13 +66,17 @@ export const MonthNavigator = ({
       </Animated.Text>
 
       <TouchableOpacity
-        className="p-2 left-4 rounded-2xl bg-white/5 active:bg-white/10"
+        className="p-2 left-4 rounded-2xl bg-light-secondary/5 dark:bg-secondary/5 active:bg-light-secondary/10 dark:active:bg-secondary/10"
         onPress={() => handlePress("next")}
         accessibilityLabel="Next month"
         accessibilityHint="Double tap to navigate to the next month"
         accessibilityRole="button"
       >
-        <Ionicons name="chevron-forward" size={24} className="text-white" />
+        <Ionicons
+          name="chevron-forward"
+          size={24}
+          className="text-brandBlue" // Brand color maintained
+        />
       </TouchableOpacity>
     </Animated.View>
   );

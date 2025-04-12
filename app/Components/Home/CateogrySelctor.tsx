@@ -96,8 +96,8 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
                 selectedCategory === category
               )} ${
                 selectedCategory === category
-                  ? "bg-brandBlue border-brandBlue" // Now uses the extracted color
-                  : "bg-white/10 border-white/20"
+                  ? "bg-brandBlue border-brandBlue"
+                  : "dark:bg-white/10 bg-gray-100 dark:border-white/20 border-gray-300"
               }`}
               onPress={() => handlePress(category)}
               activeOpacity={0.8}
@@ -106,7 +106,9 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
             >
               <Text
                 className={`text-sm font-semibold ${
-                  selectedCategory === category ? "text-white" : "text-white/90"
+                  selectedCategory === category 
+                    ? "text-white" 
+                    : "dark:text-white/90 text-gray-700"
                 }`}
                 numberOfLines={1}
               >

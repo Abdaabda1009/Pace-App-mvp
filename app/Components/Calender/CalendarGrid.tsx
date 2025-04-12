@@ -14,7 +14,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DateObject, Subscription } from "./types";
 import { getDatesForMonth, getSubscriptionsForDate } from "./utils";
 import DateCell, { CellMeasurement } from "./DateCell";
-import { MonthNavigator } from "./MonthNavigator";
 import { DayHeaders } from "./DayHeaders";
 import "nativewind";
 import { Ionicons } from "@expo/vector-icons";
@@ -146,7 +145,7 @@ const CalendarGrid = ({
   const keyExtractor = useCallback((item: DateObject) => item.dateString, []);
 
   return (
-    <View className="flex-1 gap-2">
+    <View className="flex-1 gap-2 bg-light-background dark:bg-primary">
       <DayHeaders />
       <AnimatedFlatList
         ref={gridRef}
@@ -200,9 +199,11 @@ const AgendaView = ({
       return (
         <View
           key="more"
-          className="w-8 h-8 rounded-full items-center justify-center mr-3 bg-white/10"
+          className="w-8 h-8 rounded-full items-center justify-center mr-3 bg-gray-200 dark:bg-white/10"
         >
-          <Text className="text-white text-xs font-bold">1+</Text>
+          <Text className="text-gray-800 dark:text-white text-xs font-bold">
+            1+
+          </Text>
         </View>
       );
     }
@@ -219,14 +220,17 @@ const AgendaView = ({
   };
 
   return (
-    <ScrollView className="flex-1">
+    <ScrollView className="flex-1 bg-light-background dark:bg-primary">
       {Object.entries(groupedSubscriptions).map(
         ([dateString, dateSubscriptions]) => {
           const date = new Date(dateString);
           return (
-            <View key={dateString} className="border-b border-white/10 p-4">
+            <View
+              key={dateString}
+              className="border-b border-gray-300 dark:border-white/10 p-4"
+            >
               <View className="flex-row justify-between items-center mb-2">
-                <Text className="text-lg font-semibold text-white">
+                <Text className="text-lg font-semibold text-light-text dark:text-textLight">
                   {date.toLocaleDateString("en-US", {
                     weekday: "long",
                     month: "long",
@@ -248,7 +252,7 @@ const AgendaView = ({
                   <TouchableOpacity
                     key={subscription.id}
                     onPress={() => onSubscriptionPress(subscription)}
-                    className="flex-row items-center bg-white/5 p-3 rounded-lg"
+                    className="flex-row items-center bg-gray-100 dark:bg-white/5 p-3 rounded-lg"
                   >
                     <View
                       className="w-8 h-8 rounded-full items-center justify-center mr-3"
@@ -261,10 +265,10 @@ const AgendaView = ({
                       />
                     </View>
                     <View className="flex-1">
-                      <Text className="text-white font-medium">
+                      <Text className="text-light-text dark:text-textLight font-medium">
                         {subscription.name}
                       </Text>
-                      <Text className="text-white/60 text-sm">
+                      <Text className="text-gray-600 dark:text-white/60 text-sm">
                         ${subscription.price}
                       </Text>
                     </View>

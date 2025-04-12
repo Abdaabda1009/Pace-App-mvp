@@ -11,10 +11,12 @@ import {
   Platform,
   PanResponder,
   StyleSheet,
+  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
+import { getLogoData } from "../../utils/logoUtils";
 
 interface SubscriptionModalProps {
   visible: boolean;
@@ -23,7 +25,6 @@ interface SubscriptionModalProps {
   onEdit?: (subscription: any) => void;
   onPause?: (subscription: any) => void;
   onDelete?: (subscription: any) => void;
-  logoImages: Record<string, any>;
 }
 
 const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
@@ -33,7 +34,6 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   onEdit = () => {},
   onPause = () => {},
   onDelete = () => {},
-  logoImages,
 }) => {
   const insets = useSafeAreaInsets();
   const translateY = useRef(new Animated.Value(1000)).current;
@@ -41,6 +41,20 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const [notesHeight, setNotesHeight] = useState(48);
+  const [logoData, setLogoData] = useState<{
+    url: string;
+    color: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const loadLogo = async () => {
+      if (subscription?.name) {
+        const data = await getLogoData(subscription.name);
+        setLogoData(data);
+      }
+    };
+    loadLogo();
+  }, [subscription?.name]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -134,6 +148,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   if (!visible || !subscription) return null;
 
   const renewalInfo = daysUntilRenewal(subscription.renewalDate);
+  const logoColor = logoData?.color || "#2F80ED";
 
   return (
     <Animated.View className="absolute inset-0 z-50" style={{ opacity }}>
@@ -149,7 +164,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
         className="flex-1 justify-end"
       >
         <Animated.View
-          className="absolute bottom-0 left-0 right-0 bg-primary rounded-t-3xl pt-4 px-4"
+          className="absolute bottom-0 left-0 right-0 bg-light-primary dark:bg-primary rounded-t-3xl pt-4 px-4"
           style={{
             transform: [{ translateY }],
             paddingBottom: insets.bottom + 20,
@@ -162,7 +177,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
           {...panResponder.panHandlers}
         >
           <View className="items-center mb-4" {...panResponder.panHandlers}>
-            <View className="w-12 h-1.5 bg-white/20 rounded-full" />
+            <View className="w-12 h-1.5 bg-light-text/20 dark:bg-white/20 rounded-full" />
           </View>
 
           <ScrollView
@@ -179,36 +194,57 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                 className="p-2"
                 hitSlop={{ top: 20, right: 20, bottom: 20, left: 20 }}
               >
-                <Ionicons name="close" size={24} color="white" />
+                <Ionicons
+                  name="close"
+                  size={24}
+                  className="text-light-text dark:text-white"
+                />
               </TouchableOpacity>
             </View>
 
             {/* Logo and Title Section */}
             <View className="items-center mb-4 gap-3">
-              <Image
-                source={logoImages[subscription.logoKey || "netflix"]}
-                className="w-20 h-20 rounded-lg"
-                resizeMode="contain"
-              />
-              <Text className="text-white text-2xl font-bold mt-2">
+              <View
+                className="w-20 h-20 rounded-xl justify-center items-center"
+                style={{ backgroundColor: `${logoColor}20` }}
+              >
+                {logoData ? (
+                  <Image
+                    source={{ uri: logoData.url }}
+                    className="w-16 h-16 rounded-xl"
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <ActivityIndicator size="large" color={logoColor} />
+                )}
+              </View>
+              <Text className="text-light-text dark:text-white text-2xl font-bold mt-2">
                 {subscription.name}
               </Text>
-              <View className="px-2 py-1 bg-brandBlue/20 rounded-lg">
-                <Text className="text-brandBlue text-xs font-semibold">
+              <View
+                className="px-3 py-1.5 rounded-lg"
+                style={{ backgroundColor: `${logoColor}20` }}
+              >
+                <Text
+                  className="text-xs font-semibold"
+                  style={{ color: logoColor }}
+                >
                   {subscription.category}
                 </Text>
               </View>
             </View>
 
             {/* Price and Renewal Card */}
-            <View className="bg-white/5 rounded-3xl p-5 mb-6 overflow-hidden">
+            <View className="bg-light-secondary dark:bg-white/5 rounded-3xl p-5 mb-6 overflow-hidden">
               <View className="flex-row justify-between items-center mb-4">
-                <Text className="text-white/70 text-base">Monthly Price</Text>
+                <Text className="text-light-text/70 dark:text-white/70 text-base">
+                  Monthly Price
+                </Text>
                 <View className="items-end">
-                  <Text className="text-white text-xl font-bold">
+                  <Text className="text-light-text dark:text-white text-xl font-bold">
                     ${subscription.price.toFixed(2)}
                   </Text>
-                  <Text className="text-white/50 text-xs">
+                  <Text className="text-light-text/50 dark:text-white/50 text-xs">
                     ${(subscription.price * 12).toFixed(2)}/year
                   </Text>
                 </View>
@@ -216,8 +252,12 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
 
               <View className="flex-row justify-between items-center">
                 <View className="flex-row items-center">
-                  <Ionicons name="calendar" size={16} color="#FFFFFF70" />
-                  <Text className="text-white/70 text-sm ml-2">
+                  <Ionicons
+                    name="calendar"
+                    size={16}
+                    className="text-light-text/70 dark:text-white/70"
+                  />
+                  <Text className="text-light-text/70 dark:text-white/70 text-sm ml-2">
                     Next renewal
                   </Text>
                 </View>
@@ -232,7 +272,9 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                   )}
                   <Text
                     className={`text-sm ${
-                      renewalInfo.isUrgent ? "text-amber-400" : "text-white"
+                      renewalInfo.isUrgent
+                        ? "text-amber-400"
+                        : "text-light-text dark:text-white"
                     }`}
                   >
                     {getFormattedDate(subscription.renewalDate)} (
@@ -243,16 +285,18 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
             </View>
 
             {/* Billing & Plan Details Card */}
-            <View className="bg-white/5 rounded-3xl p-5 mb-6 overflow-hidden">
-              <Text className="text-white/70 text-base mb-3">
+            <View className="bg-light-secondary dark:bg-white/5 rounded-3xl p-5 mb-6 overflow-hidden">
+              <Text className="text-light-text/70 dark:text-white/70 text-base mb-3">
                 Billing & Plan
               </Text>
 
               {/* Payment Method */}
               {subscription.paymentMethod && (
                 <View className="flex-row justify-between items-center mb-3">
-                  <Text className="text-white/70 text-sm">Payment Method</Text>
-                  <Text className="text-white text-sm">
+                  <Text className="text-light-text/70 dark:text-white/70 text-sm">
+                    Payment Method
+                  </Text>
+                  <Text className="text-light-text dark:text-white text-sm">
                     {subscription.paymentMethod.type === "card"
                       ? `•••• ${subscription.paymentMethod.lastFour}`
                       : subscription.paymentMethod.type}
@@ -263,8 +307,10 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
               {/* Expiry Date */}
               {subscription.paymentMethod?.expiryDate && (
                 <View className="flex-row justify-between items-center mb-3">
-                  <Text className="text-white/70 text-sm">Expiry Date</Text>
-                  <Text className="text-white text-sm">
+                  <Text className="text-light-text/70 dark:text-white/70 text-sm">
+                    Expiry Date
+                  </Text>
+                  <Text className="text-light-text dark:text-white text-sm">
                     {subscription.paymentMethod.expiryDate}
                   </Text>
                 </View>
@@ -273,8 +319,10 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
               {/* Billing Cycle */}
               {subscription.billingCycle && (
                 <View className="flex-row justify-between items-center mb-3">
-                  <Text className="text-white/70 text-sm">Billing Cycle</Text>
-                  <Text className="text-white text-sm capitalize">
+                  <Text className="text-light-text/70 dark:text-white/70 text-sm">
+                    Billing Cycle
+                  </Text>
+                  <Text className="text-light-text dark:text-white text-sm capitalize">
                     {subscription.billingCycle}
                   </Text>
                 </View>
@@ -282,8 +330,10 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
 
               {/* Plan Tier */}
               <View className="flex-row justify-between items-center">
-                <Text className="text-white/70 text-sm">Plan Tier</Text>
-                <Text className="text-white text-sm">
+                <Text className="text-light-text/70 dark:text-white/70 text-sm">
+                  Plan Tier
+                </Text>
+                <Text className="text-light-text dark:text-white text-sm">
                   {subscription.price === 0 ? "Free Plan" : "Premium Plan"}
                 </Text>
               </View>
@@ -329,12 +379,14 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
             </View>
 
             {/* Notes Section */}
-            <View className="bg-white/5 rounded-2xl p-4 mb-4">
-              <Text className="text-white/70 text-base mb-2">Notes</Text>
+            <View className="bg-light-secondary dark:bg-white/5 rounded-2xl p-4 mb-4">
+              <Text className="text-light-text/70 dark:text-white/70 text-base mb-2">
+                Notes
+              </Text>
               <TextInput
-                className="bg-white/10 rounded-lg px-3 py-2 text-white text-sm"
+                className="bg-light-primary dark:bg-white/10 rounded-lg px-3 py-2 text-light-text dark:text-white text-sm"
                 placeholder="Add notes about this subscription..."
-                placeholderTextColor="rgba(255,255,255,0.4)"
+                placeholderTextColor="#64748B" // Neutral color that works in both modes
                 multiline={true}
                 defaultValue={subscription.notes || ""}
                 onFocus={() => {
