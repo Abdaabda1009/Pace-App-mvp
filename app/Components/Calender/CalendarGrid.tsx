@@ -7,6 +7,7 @@ import {
   Text,
   Image,
   ScrollView,
+  RefreshControl,
 } from "react-native";
 import * as Haptics from "expo-haptics";
 import Animated, { FadeIn, Layout } from "react-native-reanimated";
@@ -30,6 +31,7 @@ interface CalendarGridProps {
     dateSubscriptions: Subscription[],
     cellMeasurement: CellMeasurement
   ) => void;
+  refreshControl?: React.ReactElement;
 }
 
 const AnimatedFlatList = Animated.createAnimatedComponent(FlatList<DateObject>);
@@ -42,6 +44,7 @@ const CalendarGrid = ({
   onDatePress,
   onSubscriptionPress,
   onDateLongPress,
+  refreshControl,
 }: CalendarGridProps) => {
   const [showAgenda, setShowAgenda] = useState(false);
   const { width } = useWindowDimensions();
@@ -161,6 +164,7 @@ const CalendarGrid = ({
         columnWrapperStyle={{
           gap: 0,
         }}
+        refreshControl={refreshControl}
       />
     </View>
   );

@@ -12,11 +12,13 @@ import {
   PanResponder,
   StyleSheet,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
-import { getLogoData } from "../../utils/logoUtils";
+import { getLogoData } from "../utils/logoUtils";
+import { deleteSubscription } from "../utils/subscriptionLogic";
 
 interface SubscriptionModalProps {
   visible: boolean;
@@ -40,7 +42,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   const opacity = useRef(new Animated.Value(0)).current;
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
-  const [notesHeight, setNotesHeight] = useState(48);
+  const [notesHeight, setNotesHeight] = useState(50);
   const [logoData, setLogoData] = useState<{
     url: string;
     color: string;
@@ -62,16 +64,17 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
       onPanResponderMove: (_, gestureState) => {
         if (gestureState.dy > 0) {
           translateY.setValue(gestureState.dy);
+          opacity.setValue(1 - gestureState.dy / 400);
         }
       },
       onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dy > 100) {
+        if (gestureState.dy > 200) {
           onDismiss();
         } else {
-          Animated.spring(translateY, {
-            toValue: 0,
-            useNativeDriver: true,
-          }).start();
+          Animated.parallel([
+            Animated.spring(translateY, { toValue: 0, useNativeDriver: true }),
+            Animated.spring(opacity, { toValue: 1, useNativeDriver: true }),
+          ]).start();
         }
       },
     })
@@ -84,7 +87,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
           toValue: 0,
           useNativeDriver: true,
           damping: 80,
-          stiffness: 300,
+          stiffness: 250,
         }),
         Animated.timing(opacity, {
           toValue: 1,
@@ -129,14 +132,29 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
     action();
   };
 
-  const handleDeletePress = () => {
+  const handleDeletePress = async () => {
     if (!showDeleteConfirm) {
       setShowDeleteConfirm(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     } else {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      onDelete(subscription);
-      onDismiss();
+      try {
+        const success = await deleteSubscription(subscription.id);
+        if (success) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          onDelete(subscription);
+          onDismiss();
+        } else {
+          Alert.alert(
+            "Error",
+            "Failed to delete subscription. Please try again."
+          );
+          setShowDeleteConfirm(false);
+        }
+      } catch (error) {
+        console.error("Error deleting subscription:", error);
+        Alert.alert("Error", "An unexpected error occurred. Please try again.");
+        setShowDeleteConfirm(false);
+      }
     }
   };
 
@@ -151,9 +169,9 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   const logoColor = logoData?.color || "#2F80ED";
 
   return (
-    <Animated.View className="absolute inset-0 z-50" style={{ opacity }}>
+    <Animated.View style={[styles.container, { opacity }]}>
       <TouchableOpacity
-        className="absolute inset-0 bg-black/50"
+        style={styles.backgroundOverlay}
         activeOpacity={1}
         onPress={onDismiss}
         hitSlop={{ top: 20, right: 20, bottom: 20, left: 20 }}
@@ -161,121 +179,106 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={insets.top}
-        className="flex-1 justify-end"
+        style={styles.keyboardAvoidingView}
       >
         <Animated.View
-          className="absolute bottom-0 left-0 right-0 bg-light-primary dark:bg-primary rounded-t-3xl pt-4 px-4"
-          style={{
-            transform: [{ translateY }],
-            paddingBottom: insets.bottom + 20,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: -4 },
-            shadowOpacity: 0.2,
-            shadowRadius: 20,
-            elevation: 20,
-          }}
+          style={[
+            styles.modalContent,
+            {
+              transform: [{ translateY }],
+              paddingBottom: insets.bottom + 20,
+              backgroundColor: "#FFFFFF",
+            },
+          ]}
           {...panResponder.panHandlers}
         >
-          <View className="items-center mb-4" {...panResponder.panHandlers}>
-            <View className="w-12 h-1.5 bg-light-text/20 dark:bg-white/20 rounded-full" />
+          <View style={styles.handleIndicator} {...panResponder.panHandlers}>
+            <View style={styles.handleBar} />
           </View>
 
           <ScrollView
             ref={scrollViewRef}
-            className="flex-1"
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ paddingBottom: 20 }}
+            contentContainerStyle={styles.scrollContent}
           >
             {/* Header Section */}
-            <View className="flex-row justify-end mb-2">
+            <View style={styles.header}>
               <TouchableOpacity
                 onPress={onDismiss}
-                className="p-2"
+                style={styles.closeButton}
                 hitSlop={{ top: 20, right: 20, bottom: 20, left: 20 }}
               >
-                <Ionicons
-                  name="close"
-                  size={24}
-                  className="text-light-text dark:text-white"
-                />
+                <Ionicons name="close" size={24} color="#1E293B" />
               </TouchableOpacity>
             </View>
 
             {/* Logo and Title Section */}
-            <View className="items-center mb-4 gap-3">
+            <View style={styles.logoSection}>
               <View
-                className="w-20 h-20 rounded-xl justify-center items-center"
-                style={{ backgroundColor: `${logoColor}20` }}
+                style={[
+                  styles.logoContainer,
+                  { backgroundColor: `${logoColor}20` },
+                ]}
               >
                 {logoData ? (
                   <Image
                     source={{ uri: logoData.url }}
-                    className="w-16 h-16 rounded-xl"
+                    style={styles.logoImage}
                     resizeMode="contain"
                   />
                 ) : (
                   <ActivityIndicator size="large" color={logoColor} />
                 )}
               </View>
-              <Text className="text-light-text dark:text-white text-2xl font-bold mt-2">
-                {subscription.name}
-              </Text>
+              <Text style={styles.title}>{subscription.name}</Text>
               <View
-                className="px-3 py-1.5 rounded-lg"
-                style={{ backgroundColor: `${logoColor}20` }}
+                style={[
+                  styles.categoryBadge,
+                  { backgroundColor: `${logoColor}20` },
+                ]}
               >
-                <Text
-                  className="text-xs font-semibold"
-                  style={{ color: logoColor }}
-                >
+                <Text style={[styles.categoryText, { color: logoColor }]}>
                   {subscription.category}
                 </Text>
               </View>
             </View>
 
             {/* Price and Renewal Card */}
-            <View className="bg-light-secondary dark:bg-white/5 rounded-3xl p-5 mb-6 overflow-hidden">
-              <View className="flex-row justify-between items-center mb-4">
-                <Text className="text-light-text/70 dark:text-white/70 text-base">
-                  Monthly Price
-                </Text>
-                <View className="items-end">
-                  <Text className="text-light-text dark:text-white text-xl font-bold">
+            <View style={styles.card}>
+              <View style={styles.cardRow}>
+                <Text style={styles.cardLabel}>Monthly Price</Text>
+                <View style={styles.priceContainer}>
+                  <Text style={styles.price}>
                     ${subscription.price.toFixed(2)}
                   </Text>
-                  <Text className="text-light-text/50 dark:text-white/50 text-xs">
+                  <Text style={styles.yearlyPrice}>
                     ${(subscription.price * 12).toFixed(2)}/year
                   </Text>
                 </View>
               </View>
 
-              <View className="flex-row justify-between items-center">
-                <View className="flex-row items-center">
-                  <Ionicons
-                    name="calendar"
-                    size={16}
-                    className="text-light-text/70 dark:text-white/70"
-                  />
-                  <Text className="text-light-text/70 dark:text-white/70 text-sm ml-2">
-                    Next renewal
-                  </Text>
+              <View style={styles.separator} />
+
+              <View style={styles.cardRow}>
+                <View style={styles.iconLabel}>
+                  <Ionicons name="calendar" size={16} color="#64748B" />
+                  <Text style={styles.cardLabel}>Next renewal</Text>
                 </View>
-                <View className="flex-row items-center">
+                <View style={styles.renewalContainer}>
                   {renewalInfo.isUrgent && (
                     <Ionicons
                       name="alert-circle"
                       size={14}
                       color="#F59E0B"
-                      className="mr-1"
+                      style={styles.alertIcon}
                     />
                   )}
                   <Text
-                    className={`text-sm ${
-                      renewalInfo.isUrgent
-                        ? "text-amber-400"
-                        : "text-light-text dark:text-white"
-                    }`}
+                    style={[
+                      styles.renewalText,
+                      renewalInfo.isUrgent && styles.urgentText,
+                    ]}
                   >
                     {getFormattedDate(subscription.renewalDate)} (
                     {renewalInfo.text})
@@ -285,126 +288,302 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
             </View>
 
             {/* Billing & Plan Details Card */}
-            <View className="bg-light-secondary dark:bg-white/5 rounded-3xl p-5 mb-6 overflow-hidden">
-              <Text className="text-light-text/70 dark:text-white/70 text-base mb-3">
-                Billing & Plan
-              </Text>
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>Billing & Plan</Text>
 
-              {/* Payment Method */}
               {subscription.paymentMethod && (
-                <View className="flex-row justify-between items-center mb-3">
-                  <Text className="text-light-text/70 dark:text-white/70 text-sm">
-                    Payment Method
-                  </Text>
-                  <Text className="text-light-text dark:text-white text-sm">
-                    {subscription.paymentMethod.type === "card"
+                <DetailRow
+                  label="Payment Method"
+                  value={
+                    subscription.paymentMethod.type === "card"
                       ? `•••• ${subscription.paymentMethod.lastFour}`
-                      : subscription.paymentMethod.type}
-                  </Text>
-                </View>
-              )}
-
-              {/* Expiry Date */}
-              {subscription.paymentMethod?.expiryDate && (
-                <View className="flex-row justify-between items-center mb-3">
-                  <Text className="text-light-text/70 dark:text-white/70 text-sm">
-                    Expiry Date
-                  </Text>
-                  <Text className="text-light-text dark:text-white text-sm">
-                    {subscription.paymentMethod.expiryDate}
-                  </Text>
-                </View>
-              )}
-
-              {/* Billing Cycle */}
-              {subscription.billingCycle && (
-                <View className="flex-row justify-between items-center mb-3">
-                  <Text className="text-light-text/70 dark:text-white/70 text-sm">
-                    Billing Cycle
-                  </Text>
-                  <Text className="text-light-text dark:text-white text-sm capitalize">
-                    {subscription.billingCycle}
-                  </Text>
-                </View>
-              )}
-
-              {/* Plan Tier */}
-              <View className="flex-row justify-between items-center">
-                <Text className="text-light-text/70 dark:text-white/70 text-sm">
-                  Plan Tier
-                </Text>
-                <Text className="text-light-text dark:text-white text-sm">
-                  {subscription.price === 0 ? "Free Plan" : "Premium Plan"}
-                </Text>
-              </View>
-            </View>
-
-            {/* Action Buttons */}
-            <View className="flex-row justify-between mb-6">
-              <TouchableOpacity
-                className="flex-1 items-center p-3 mx-1 rounded-xl bg-brandBlue/10"
-                onPress={() => handleButtonPress(() => onEdit(subscription))}
-              >
-                <Ionicons name="pencil" size={20} color="#2F80ED" />
-                <Text className="mt-2 font-semibold text-brandBlue">Edit</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                className="flex-1 items-center p-3 mx-1 rounded-xl bg-brandBlue/10"
-                onPress={() => handleButtonPress(() => onPause(subscription))}
-              >
-                <Ionicons name="pause" size={20} color="#2F80ED" />
-                <Text className="mt-2 font-semibold text-brandBlue">Pause</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                className={`flex-1 items-center p-3 mx-1 rounded-xl ${
-                  showDeleteConfirm ? "bg-red-500" : "bg-red-500/10"
-                }`}
-                onPress={() => handleButtonPress(handleDeletePress)}
-              >
-                <Ionicons
-                  name="trash"
-                  size={20}
-                  color={showDeleteConfirm ? "white" : "#EF4444"}
+                      : subscription.paymentMethod.type
+                  }
                 />
-                <Text
-                  className={`mt-2 font-semibold ${
-                    showDeleteConfirm ? "text-white" : "text-red-500"
-                  }`}
-                >
-                  {showDeleteConfirm ? "Confirm" : "Delete"}
-                </Text>
-              </TouchableOpacity>
-            </View>
+              )}
 
-            {/* Notes Section */}
-            <View className="bg-light-secondary dark:bg-white/5 rounded-2xl p-4 mb-4">
-              <Text className="text-light-text/70 dark:text-white/70 text-base mb-2">
-                Notes
-              </Text>
-              <TextInput
-                className="bg-light-primary dark:bg-white/10 rounded-lg px-3 py-2 text-light-text dark:text-white text-sm"
-                placeholder="Add notes about this subscription..."
-                placeholderTextColor="#64748B" // Neutral color that works in both modes
-                multiline={true}
-                defaultValue={subscription.notes || ""}
-                onFocus={() => {
-                  scrollViewRef.current?.scrollToEnd({ animated: true });
-                }}
-                style={{ minHeight: Math.max(48, notesHeight) }}
-                onContentSizeChange={(e) => {
-                  setNotesHeight(e.nativeEvent.contentSize.height);
-                }}
+              {subscription.paymentMethod?.expiryDate && (
+                <DetailRow
+                  label="Expiry Date"
+                  value={subscription.paymentMethod.expiryDate}
+                />
+              )}
+
+              {subscription.billingCycle && (
+                <DetailRow
+                  label="Billing Cycle"
+                  value={subscription.billingCycle}
+                  capitalize
+                />
+              )}
+
+              <DetailRow
+                label="Plan Tier"
+                value={subscription.price === 0 ? "Free Plan" : "Premium Plan"}
               />
             </View>
 
-            <View className="h-4" />
+            {/* Action Buttons */}
+            <View style={styles.actionButtons}>
+              <ActionButton
+                icon="pencil"
+                label="Edit"
+                onPress={() => handleButtonPress(() => onEdit(subscription))}
+                color="#2F80ED"
+              />
+              <ActionButton
+                icon="pause"
+                label="Pause"
+                onPress={() => handleButtonPress(() => onPause(subscription))}
+                color="#2F80ED"
+              />
+              <ActionButton
+                icon="trash"
+                label={showDeleteConfirm ? "Confirm" : "Delete"}
+                onPress={handleDeletePress}
+                color="#EF4444"
+                isConfirm={showDeleteConfirm}
+              />
+            </View>
+
+            {/* Notes Section */}
+            <View style={styles.notesCard}>
+              <Text style={styles.sectionTitle}>Notes</Text>
+              <TextInput
+                style={[
+                  styles.notesInput,
+                  { minHeight: Math.max(48, notesHeight) },
+                ]}
+                placeholder="Add notes about this subscription..."
+                placeholderTextColor="#94A3B8"
+                multiline
+                defaultValue={subscription.notes || ""}
+                onFocus={() =>
+                  scrollViewRef.current?.scrollToEnd({ animated: true })
+                }
+                onContentSizeChange={(e) =>
+                  setNotesHeight(e.nativeEvent.contentSize.height)
+                }
+              />
+            </View>
           </ScrollView>
         </Animated.View>
       </KeyboardAvoidingView>
     </Animated.View>
   );
 };
+
+const DetailRow = ({ label, value, capitalize = false }: any) => (
+  <View style={styles.detailRow}>
+    <Text style={styles.cardLabel}>{label}</Text>
+    <Text style={[styles.cardValue, capitalize && styles.capitalize]}>
+      {value}
+    </Text>
+  </View>
+);
+
+const ActionButton = ({
+  icon,
+  label,
+  onPress,
+  color,
+  isConfirm = false,
+}: any) => (
+  <TouchableOpacity
+    style={[styles.actionButton, isConfirm && { backgroundColor: color }]}
+    onPress={onPress}
+    activeOpacity={0.9}
+  >
+    <Ionicons name={icon} size={20} color={isConfirm ? "white" : color} />
+    <Text
+      style={[styles.actionButtonText, { color: isConfirm ? "white" : color }]}
+    >
+      {label}
+    </Text>
+  </TouchableOpacity>
+);
+
+const styles = StyleSheet.create({
+  container: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 50,
+  },
+  backgroundOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingHorizontal: 24,
+    paddingTop: 62,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 20,
+  },
+  handleIndicator: {
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  handleBar: {
+    width: 48,
+    height: 4,
+    backgroundColor: "#CBD5E1",
+    borderRadius: 2,
+  },
+  scrollContent: {
+    paddingBottom: 32,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginBottom: 8,
+  },
+  closeButton: {
+    padding: 8,
+  },
+  logoSection: {
+    alignItems: "center",
+    marginBottom: 24,
+    gap: 12,
+  },
+  logoContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  logoImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginTop: 8,
+  },
+  categoryBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  categoryText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  card: {
+    backgroundColor: "#F8FAFC",
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+  },
+  cardRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  priceContainer: {
+    alignItems: "flex-end",
+  },
+  price: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  yearlyPrice: {
+    fontSize: 12,
+    color: "#64748B",
+    marginTop: 4,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: "#E2E8F0",
+    marginVertical: 16,
+  },
+  iconLabel: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  cardLabel: {
+    fontSize: 14,
+    color: "#64748B",
+  },
+  renewalContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  alertIcon: {
+    marginRight: 4,
+  },
+  renewalText: {
+    fontSize: 14,
+    color: "#0F172A",
+  },
+  urgentText: {
+    color: "#F59E0B",
+    fontWeight: "600",
+  },
+  sectionTitle: {
+    fontSize: 16,
+    color: "#64748B",
+    marginBottom: 16,
+  },
+  detailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  cardValue: {
+    fontSize: 14,
+    color: "#0F172A",
+  },
+  capitalize: {
+    textTransform: "capitalize",
+  },
+  actionButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 24,
+  },
+  actionButton: {
+    flex: 1,
+    alignItems: "center",
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: "rgba(47, 128, 237, 0.1)",
+  },
+  actionButtonText: {
+    marginTop: 8,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  notesCard: {
+    backgroundColor: "#F8FAFC",
+    borderRadius: 16,
+    padding: 16,
+  },
+  notesInput: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 14,
+    color: "#0F172A",
+    textAlignVertical: "top",
+  },
+});
 
 export default SubscriptionModal;

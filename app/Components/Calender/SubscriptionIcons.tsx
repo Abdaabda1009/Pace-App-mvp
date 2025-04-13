@@ -3,7 +3,6 @@ import { View, Image, TouchableOpacity, Text, Animated } from "react-native";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
 import { Subscription } from "./types";
-import { logoImages } from "./constants";
 import "nativewind";
 
 interface SubscriptionIconsProps {
@@ -58,13 +57,21 @@ export const SubscriptionIcons = ({
           }
           accessibilityRole="button"
         >
-          <Image
-            source={
-              logoImages[mainSubscription.icon as keyof typeof logoImages] ||
-              logoImages["Google"]
-            }
-            className="w-5 h-5 rounded-sm"
-          />
+          {mainSubscription.logo ? (
+            <Image
+              source={{ uri: mainSubscription.logo }}
+              className="w-5 h-5 rounded-sm"
+            />
+          ) : (
+            <View
+              className="w-5 h-5 rounded-sm justify-center items-center"
+              style={{ backgroundColor: mainSubscription.color }}
+            >
+              <Text className="text-white text-xs font-bold">
+                {mainSubscription.name.charAt(0)}
+              </Text>
+            </View>
+          )}
 
           {hasMultiple && (
             <Animated.View

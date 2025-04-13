@@ -87,7 +87,17 @@ export const getSubscriptionsForDate = (
   subscriptions: Subscription[],
   date: string
 ): Subscription[] => {
-  return subscriptions.filter((sub) => sub.renewalDate === date);
+  return subscriptions.filter((sub) => {
+    // Convert both dates to YYYY-MM-DD format for comparison
+    const subDate = new Date(sub.renewalDate);
+    const targetDate = new Date(date);
+
+    return (
+      subDate.getFullYear() === targetDate.getFullYear() &&
+      subDate.getMonth() === targetDate.getMonth() &&
+      subDate.getDate() === targetDate.getDate()
+    );
+  });
 };
 
 /**
@@ -220,9 +230,9 @@ export const getYearsInRange = (start: Date, end: Date): Date[] => {
 };
 
 export const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD'
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
   }).format(amount);
 };
 

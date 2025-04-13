@@ -95,7 +95,7 @@ const BottomTabBar: React.FC<CustomBottomTabBarProps> = ({
               backgroundColor: "#3A6D8E",
               borderTopLeftRadius: 2,
               borderTopRightRadius: 2,
-              bottom: bottomInset > 0 ? bottomInset + 8 : 10,
+              bottom: bottomInset > 0 ? bottomInset + -24 : 10,
             }}
           />
         )}
@@ -183,7 +183,7 @@ const BottomTabBar: React.FC<CustomBottomTabBarProps> = ({
               backgroundColor: "#3A6D8E",
               borderTopLeftRadius: 2,
               borderTopRightRadius: 2,
-              bottom: bottomInset > 0 ? bottomInset + 8 : 10,
+              bottom: bottomInset > 0 ? bottomInset + -24 : 10,
             }}
           />
         )}

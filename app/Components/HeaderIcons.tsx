@@ -21,7 +21,7 @@ const HeaderIcons: React.FC<HeaderIconsProps> = ({
         <Ionicons
           name="person-outline"
           size={24}
-          className="rgba(8, 151, 218, 0.98)"
+          className="text-textSecondary dark:text-white"
         />
       </TouchableOpacity>
       <TouchableOpacity
@@ -31,7 +31,7 @@ const HeaderIcons: React.FC<HeaderIconsProps> = ({
         <Ionicons
           name="settings-outline"
           size={24}
-          className="rgba(8, 151, 218, 0.98)"
+          className="text-textSecondary dark:text-white"
         />
       </TouchableOpacity>
     </View>

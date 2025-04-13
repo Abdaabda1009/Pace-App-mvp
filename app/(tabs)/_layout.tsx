@@ -9,6 +9,24 @@ import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { NavigationProp } from "@react-navigation/native";
 import HeaderIcons from "../Components/HeaderIcons";
 
+interface CustomBottomTabBarProps extends BottomTabBarProps {
+  activeTab: string;
+  onTabPress: (tabName: string) => void;
+  onAddPress: () => void;
+  bottomInset: number;
+  isHidden: boolean;
+  isDarkMode: boolean;
+  toggleDarkMode: () => void;
+}
+
+interface AddSubscriptionModalProps {
+  visible: boolean;
+  onDismiss: () => void;
+  onEmailScan: () => void;
+  onDocumentUpload: () => void;
+  isDarkMode: boolean;
+}
+
 const _layout = () => {
   const insets = useSafeAreaInsets();
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
@@ -64,10 +82,11 @@ const _layout = () => {
 
           return (
             <BottomTabBar
+              {...props}
               activeTab={activeTab}
               onTabPress={handleTabPress}
               onAddPress={() => setIsAddModalVisible(true)}
-              bottomInset={0}
+              bottomInset={insets.bottom}
               isHidden={false}
               isDarkMode={isDarkMode}
               toggleDarkMode={() => setIsDarkMode(!isDarkMode)}
@@ -132,6 +151,56 @@ const _layout = () => {
                   size={24}
                   color={isDarkMode ? "white" : "black"}
                   style={{ marginLeft: 15 }}
+                />
+              </TouchableOpacity>
+            ),
+          })}
+        />
+        <Tabs.Screen
+          name="Pace"
+          options={({ navigation }: { navigation: NavigationProp<any> }) => ({
+            headerShown: true,
+            headerTitle: "About Us",
+            headerTitleStyle: {
+              color: isDarkMode ? "#FFFFFF" : "#000000",
+              fontSize: 20,
+              fontWeight: "bold",
+            },
+            headerLeft: () => (
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                style={{ padding: 8, marginLeft: 8 }}
+              >
+                <Ionicons
+                  name="arrow-back"
+                  size={24}
+                  color={isDarkMode ? "#FFFFFF" : "#000000"}
+                />
+              </TouchableOpacity>
+            ),
+          })}
+        />
+        <Tabs.Screen
+          name="Account"
+          options={({ navigation }: { navigation: NavigationProp<any> }) => ({
+            headerShown: true,
+            headerTitle: "Account",
+            headerTitleStyle: {
+              color: isDarkMode ? "#FFFFFF" : "#000000",
+              fontSize: 20,
+              fontWeight: "bold",
+            },
+            headerLeft: () => (
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                style={{ padding: 8, marginLeft: 8 }}
+              >
+                <Ionicons
+                  name="arrow-back"
+                  size={24}
+                  color={isDarkMode ? "#FFFFFF" : "#000000"}
                 />
               </TouchableOpacity>
             ),

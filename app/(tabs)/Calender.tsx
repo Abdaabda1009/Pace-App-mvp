@@ -1,49 +1,71 @@
-import React, { useCallback, useState } from "react";
-import { View } from "react-native";
+import React, { useCallback, useState, useEffect } from "react";
+import { View, ActivityIndicator, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { DateObject, Subscription } from "../Components/Calender/types";
 import { MonthNavigator } from "../Components/Calender/MonthNavigator";
 import { DayHeaders } from "../Components/Calender/DayHeaders";
 import CalendarGrid from "../Components/Calender/CalendarGrid";
-import { logoImages } from "../Components/Calender/constants";
-
-// Sample subscription data with proper icon references
-const SAMPLE_SUBSCRIPTIONS: Subscription[] = [
-  {
-    id: "1",
-    name: "Netflix",
-    price: 15.99,
-    category: "Entertainment",
-    icon: "Netflix",
-    color: "#E50914",
-    renewalDate: "2025-04-15",
-  },
-  {
-    id: "2",
-    name: "Spotify",
-    price: 9.99,
-    category: "Music",
-    icon: "Spotify",
-    color: "#1DB954",
-    renewalDate: "2025-04-15",
-  },
-  {
-    id: "3",
-    name: "Disney+",
-    price: 7.99,
-    category: "Entertainment",
-    icon: "Disney",
-    color: "#0063E5",
-    renewalDate: "2025-04-22",
-  },
-];
+import { SubscriptionPopover } from "../Components/Calender/SubscriptionPopover";
+import SubscriptionModal from "../Components/SubscriptionModal";
+import { getAllSubscriptions } from "../utils/subscriptionLogic";
+import { getLogoData } from "../utils/logoUtils";
+import { getSubscriptionsForDate } from "../Components/Calender/utils";
 
 const Calender = () => {
   // Initialize with current date
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<DateObject | null>(null);
-  const [subscriptions] = useState<Subscription[]>(SAMPLE_SUBSCRIPTIONS);
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showPopover, setShowPopover] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedSubscription, setSelectedSubscription] =
+    useState<Subscription | null>(null);
+  const [popoverPosition, setPopoverPosition] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    pageX: number;
+    pageY: number;
+  } | null>(null);
+
+  const fetchSubscriptions = async () => {
+    try {
+      setIsLoading(true);
+      const data = await getAllSubscriptions();
+
+      // Fetch logos for each subscription
+      const subscriptionsWithLogos = await Promise.all(
+        data.map(async (subscription) => {
+          const logoData = await getLogoData(subscription.name);
+          return {
+            ...subscription,
+            logo: logoData.url,
+            color: logoData.color,
+          };
+        })
+      );
+
+      setSubscriptions(subscriptionsWithLogos);
+    } catch (error) {
+      console.error("Error fetching subscriptions:", error);
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSubscriptions();
+  }, []);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchSubscriptions();
+  }, []);
 
   const handleNavigateMonth = useCallback(
     (direction: "prev" | "next") => {
@@ -66,18 +88,43 @@ const Calender = () => {
 
   const handleSubscriptionPress = useCallback((subscription: Subscription) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    // Handle subscription press
-    console.log("Subscription pressed:", subscription);
+    setSelectedSubscription(subscription);
+    setShowModal(true);
   }, []);
 
   const handleDateLongPress = useCallback(
-    (date: DateObject, dateSubscriptions: Subscription[]) => {
+    (
+      date: DateObject,
+      dateSubscriptions: Subscription[],
+      cellMeasurement: any
+    ) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      // Handle date long press
-      console.log("Date long pressed:", date, dateSubscriptions);
+      setSelectedDate(date);
+      setPopoverPosition(cellMeasurement);
+      setShowPopover(true);
     },
     []
   );
+
+  const handleDismissPopover = useCallback(() => {
+    setShowPopover(false);
+    setPopoverPosition(null);
+  }, []);
+
+  const handleDismissModal = useCallback(() => {
+    setShowModal(false);
+    setSelectedSubscription(null);
+  }, []);
+
+  if (isLoading) {
+    return (
+      <SafeAreaView className="flex-1 bg-light-primary dark:bg-primary mt-4">
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#0000ff" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-light-primary dark:bg-primary mt-4">
@@ -97,8 +144,32 @@ const Calender = () => {
             onDatePress={handleDatePress}
             onSubscriptionPress={handleSubscriptionPress}
             onDateLongPress={handleDateLongPress}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
           />
         </View>
+
+        {/* Subscription Popover */}
+        <SubscriptionPopover
+          visible={showPopover}
+          subscriptions={
+            selectedDate
+              ? getSubscriptionsForDate(subscriptions, selectedDate.dateString)
+              : []
+          }
+          date={selectedDate?.dateString || ""}
+          cellPosition={popoverPosition}
+          onDismiss={handleDismissPopover}
+          onSubscriptionPress={handleSubscriptionPress}
+        />
+
+        {/* Subscription Modal */}
+        <SubscriptionModal
+          visible={showModal}
+          subscription={selectedSubscription}
+          onDismiss={handleDismissModal}
+        />
       </View>
     </SafeAreaView>
   );

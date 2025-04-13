@@ -8,14 +8,19 @@ import {
   Image,
   Animated,
   ActivityIndicator,
+  Modal,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Subscription } from "../../Components/Calender/types";
-import { getAllSubscriptions } from "../../utils/subscriptionLogic";
+import {
+  getAllSubscriptions,
+  deleteSubscription,
+} from "../../utils/subscriptionLogic";
 import { useFocusEffect } from "@react-navigation/native";
-import { getLogoData } from "../../../utils/logoUtils";
+import { getLogoData } from "../../utils/logoUtils";
 
 interface SubscriptionListProps {
   onAddPress: () => void;
@@ -24,8 +29,19 @@ interface SubscriptionListProps {
   selectedCategory?: string;
 }
 
+type SortOption = "price" | "alphabetical" | "date" | "none";
+type SortOrder = "asc" | "desc";
+
 const SubscriptionListItem = React.memo(
-  ({ item, onPress }: { item: Subscription; onPress: () => void }) => {
+  ({
+    item,
+    onPress,
+    onDelete,
+  }: {
+    item: Subscription;
+    onPress: () => void;
+    onDelete: () => void;
+  }) => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const scaleAnim = useRef(new Animated.Value(0.9)).current;
     const [logoData, setLogoData] = useState<{
@@ -79,7 +95,7 @@ const SubscriptionListItem = React.memo(
         style={{ opacity: fadeAnim, transform: [{ scale: scaleAnim }] }}
       >
         <TouchableOpacity
-          className="flex-row bg-white/5 rounded-2xl p-4 mb-4 items-center border border-white/10 ios:shadow-lg android:shadow-none"
+          className="flex-row bg-light-card rounded-2xl p-4 mb-4 items-center border-2 border-black/20 dark:bg-dark-card dark:border-dark-border"
           onPress={onPress}
           activeOpacity={0.7}
           accessibilityRole="button"
@@ -101,7 +117,7 @@ const SubscriptionListItem = React.memo(
           </View>
 
           <View className="flex-1 ml-4">
-            <Text className="text-white text-lg font-semibold mb-1">
+            <Text className="text-light-foreground text-lg font-semibold mb-1 dark:text-white">
               {item.name}
             </Text>
             <View className="flex-row items-center">
@@ -117,7 +133,7 @@ const SubscriptionListItem = React.memo(
           </View>
 
           <View className="items-end">
-            <Text className="text-white text-lg font-bold">
+            <Text className="text-light-foreground text-lg font-bold dark:text-white">
               ${item.price.toFixed(2)}
             </Text>
             <View className="flex-row items-center">
@@ -131,7 +147,7 @@ const SubscriptionListItem = React.memo(
               )}
               <Text
                 className={`text-sm ${
-                  renewalInfo.isUrgent ? "text-amber-400" : "text-white/50"
+                  renewalInfo.isUrgent ? "text-amber-600" : "text-white/50"
                 }`}
               >
                 {renewalInfo.text}
@@ -155,6 +171,10 @@ const SubscriptionList: React.FC<SubscriptionListProps> = ({
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [sortOption, setSortOption] = useState<SortOption>("none");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+  const [showDropdown, setShowDropdown] = useState(false);
   const lastRefreshTime = useRef<number>(0);
   const refreshTimeout = useRef<NodeJS.Timeout>();
   const retryCount = useRef(0);
@@ -268,33 +288,105 @@ const SubscriptionList: React.FC<SubscriptionListProps> = ({
     action();
   };
 
-  // Filter subscriptions based on selected category
-  const filteredSubscriptions = React.useMemo(() => {
-    if (selectedCategory === "All") {
-      return subscriptions;
-    }
-    return subscriptions.filter(
-      (sub) => sub.category.toLowerCase() === selectedCategory.toLowerCase()
-    );
-  }, [subscriptions, selectedCategory]);
+  const handleFilterPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setShowDropdown(!showDropdown);
+  };
 
-  useEffect(() => {
-    console.log("Current subscriptions state:", subscriptions);
-  }, [subscriptions]);
+  const handleSortOptionPress = (option: SortOption) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (option === sortOption) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortOption(option);
+      setSortOrder("asc");
+    }
+    setShowDropdown(false);
+  };
+
+  const getSortedSubscriptions = useCallback(() => {
+    let sorted = [...subscriptions];
+
+    if (selectedCategory !== "All") {
+      sorted = sorted.filter(
+        (sub) => sub.category.toLowerCase() === selectedCategory.toLowerCase()
+      );
+    }
+
+    switch (sortOption) {
+      case "price":
+        sorted.sort((a, b) =>
+          sortOrder === "asc" ? a.price - b.price : b.price - a.price
+        );
+        break;
+      case "alphabetical":
+        sorted.sort((a, b) =>
+          sortOrder === "asc"
+            ? a.name.localeCompare(b.name)
+            : b.name.localeCompare(a.name)
+        );
+        break;
+      case "date":
+        sorted.sort((a, b) => {
+          const dateA = new Date(a.renewalDate);
+          const dateB = new Date(b.renewalDate);
+          return sortOrder === "asc"
+            ? dateA.getTime() - dateB.getTime()
+            : dateB.getTime() - dateA.getTime();
+        });
+        break;
+    }
+
+    return sorted;
+  }, [subscriptions, selectedCategory, sortOption, sortOrder]);
+
+  const handleDelete = async (subscription: Subscription) => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+
+    Alert.alert(
+      "Delete Subscription",
+      `Are you sure you want to delete ${subscription.name}?`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const success = await deleteSubscription(subscription.id);
+              if (success) {
+                Haptics.notificationAsync(
+                  Haptics.NotificationFeedbackType.Success
+                );
+                setSubscriptions((prev) =>
+                  prev.filter((sub) => sub.id !== subscription.id)
+                );
+              } else {
+                Alert.alert(
+                  "Error",
+                  "Failed to delete subscription. Please try again."
+                );
+              }
+            } catch (error) {
+              console.error("Error deleting subscription:", error);
+              Alert.alert(
+                "Error",
+                "An unexpected error occurred. Please try again."
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center">
-        <ActivityIndicator size="large" color="#2F80ED" />
-        <Text className="text-white/80 mt-4">Loading subscriptions...</Text>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View className="flex-1 items-center justify-center px-4">
-        <Text className="text-white/80 text-lg font-semibold mb-2 text-center">
+      <View className="flex-1 items-center justify-center px-4 bg-background dark:bg-darkBackground">
+        <Text className="text-textPrimary/80 dark:text-darkTextPrimary/80 text-lg font-semibold mb-2 text-center">
           {error}
         </Text>
         <TouchableOpacity
@@ -308,35 +400,120 @@ const SubscriptionList: React.FC<SubscriptionListProps> = ({
   }
 
   return (
-    <View className="flex-1 px-4">
+    <View className="flex-1 px-4 bg-background dark:bg-darkBackground">
       <View className="flex-row justify-between items-center mb-6">
         <View>
-          <Text className="text-white text-xl font-bold">Subscriptions</Text>
-          <Text className="text-white/50 text-sm">
-            {filteredSubscriptions.length}{" "}
-            {filteredSubscriptions.length === 1
+          <Text className="text-textPrimary dark:text-white text-xl font-bold">
+            Subscriptions
+          </Text>
+          <Text className="text-textSecondary dark:text-white text-sm">
+            {getSortedSubscriptions().length}{" "}
+            {getSortedSubscriptions().length === 1
               ? "subscription"
               : "subscriptions"}{" "}
             found
           </Text>
         </View>
-        <TouchableOpacity
-          className="flex-row items-center bg-brandBlue/10 px-4 py-2 rounded-full"
-          onPress={() => handlePress(onAddPress)}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="add" size={20} color="#2F80ED" />
-          <Text className="text-brandBlue ml-2 font-semibold">Add Service</Text>
-        </TouchableOpacity>
+        <View>
+          <TouchableOpacity
+            className="flex-row items-center bg-brandBlue/10 px-4 py-2 rounded-full"
+            onPress={handleFilterPress}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="filter" size={20} color="#2F80ED" />
+            <Text className="text-brandBlue ml-2 font-semibold">Filter</Text>
+          </TouchableOpacity>
+
+          {showDropdown && (
+            <View className="absolute right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 w-48">
+              <TouchableOpacity
+                className="flex-row items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700"
+                onPress={() => handleSortOptionPress("price")}
+              >
+                <View className="flex-row items-center">
+                  <Ionicons name="cash-outline" size={20} color="#6B7280" />
+                  <Text className="ml-3 text-gray-900 dark:text-white">
+                    Price
+                  </Text>
+                </View>
+                {sortOption === "price" && (
+                  <Ionicons
+                    name={sortOrder === "asc" ? "arrow-up" : "arrow-down"}
+                    size={16}
+                    color="#2F80ED"
+                  />
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className="flex-row items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700"
+                onPress={() => handleSortOptionPress("alphabetical")}
+              >
+                <View className="flex-row items-center">
+                  <Ionicons name="text-outline" size={20} color="#6B7280" />
+                  <Text className="ml-3 text-gray-900 dark:text-white">
+                    Alphabetical
+                  </Text>
+                </View>
+                {sortOption === "alphabetical" && (
+                  <Ionicons
+                    name={sortOrder === "asc" ? "arrow-up" : "arrow-down"}
+                    size={16}
+                    color="#2F80ED"
+                  />
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className="flex-row items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700"
+                onPress={() => handleSortOptionPress("date")}
+              >
+                <View className="flex-row items-center">
+                  <Ionicons name="calendar-outline" size={20} color="#6B7280" />
+                  <Text className="ml-3 text-gray-900 dark:text-white">
+                    Renewal Date
+                  </Text>
+                </View>
+                {sortOption === "date" && (
+                  <Ionicons
+                    name={sortOrder === "asc" ? "arrow-up" : "arrow-down"}
+                    size={16}
+                    color="#2F80ED"
+                  />
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className="flex-row items-center p-3"
+                onPress={() => {
+                  setSortOption("none");
+                  setShowDropdown(false);
+                }}
+              >
+                <View className="flex-row items-center">
+                  <Ionicons
+                    name="close-circle-outline"
+                    size={20}
+                    color="#6B7280"
+                  />
+                  <Text className="ml-3 text-gray-900 dark:text-white">
+                    Clear Sort
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       </View>
 
-      {filteredSubscriptions.length > 0 ? (
+      {getSortedSubscriptions().length > 0 ? (
         <FlatList
-          data={filteredSubscriptions}
+          data={getSortedSubscriptions()}
           renderItem={({ item }) => (
             <SubscriptionListItem
               item={item}
               onPress={() => handlePress(() => onSubscriptionPress(item))}
+              onDelete={() => handleDelete(item)}
             />
           )}
           keyExtractor={(item) => item.id}
@@ -356,27 +533,17 @@ const SubscriptionList: React.FC<SubscriptionListProps> = ({
         />
       ) : (
         <View className="flex-1 items-center justify-center py-10">
-          <View className="bg-white/10 p-6 rounded-full mb-4">
+          <View className="bg-textPrimary/10 dark:bg-darkTextPrimary/10 p-6 rounded-full mb-4">
             <Ionicons name="wallet-outline" size={40} color="#2F80ED" />
           </View>
-          <Text className="text-white/80 text-lg font-semibold mb-2">
+          <Text className="text-textPrimary/80 dark:text-white/80 text-lg font-semibold mb-2">
             No Subscriptions Found
           </Text>
-          <Text className="text-white/50 text-sm text-center px-8 mb-6">
+          <Text className="text-textSecondary dark:text-white text-sm text-center px-8 mb-6">
             {selectedCategory === "All"
               ? "Start by adding your first subscription to manage your recurring expenses"
               : `No subscriptions found in the ${selectedCategory} category`}
           </Text>
-          <TouchableOpacity
-            className="bg-brandBlue px-8 py-3 rounded-full flex-row items-center"
-            onPress={() => handlePress(onAddPress)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="add" size={20} color="white" />
-            <Text className="text-white font-semibold ml-2">
-              Add Subscription
-            </Text>
-          </TouchableOpacity>
         </View>
       )}
     </View>

@@ -16,7 +16,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { Link, useRouter } from "expo-router";
 import { Subscription } from "./types";
-import { logoImages } from "./constants";
 import { getMonthName } from "./utils";
 import "nativewind";
 import tw from "tailwind-react-native-classnames";
@@ -130,20 +129,25 @@ export const SubscriptionPopover = ({
           <Animated.View
             style={[
               tw`bg-gray-900 rounded-xl shadow-lg border border-white/10`,
-              { opacity: opacityAnim, transform: [{ scale: scaleAnim }] },
+              {
+                opacity: opacityAnim,
+                transform: [{ scale: scaleAnim }],
+                width: screenWidth * 0.8,
+                maxHeight: screenHeight * 0.5,
+              },
             ]}
           >
             <View
-              style={tw`flex-row justify-between items-center p-4 border-b border-white/10`}
+              style={tw`flex-row justify-between items-center p-3 border-b border-white/10`}
             >
-              <Text style={tw`text-lg font-bold text-white`}>
+              <Text style={tw`text-base font-bold text-white`}>
                 {formattedDate}
               </Text>
               <TouchableOpacity
                 onPress={handleDismiss}
-                style={tw`p-1.5 rounded-lg active:bg-white/10`}
+                style={tw`p-1 rounded-lg active:bg-white/10`}
               >
-                <Ionicons name="close" size={22} color="white" />
+                <Ionicons name="close" size={20} color="white" />
               </TouchableOpacity>
             </View>
 
@@ -157,44 +161,57 @@ export const SubscriptionPopover = ({
                       handleDismiss();
                       onSubscriptionPress(item);
                     }}
-                    style={tw`flex-row items-center p-4 border-b border-white/10 active:bg-white/5`}
+                    style={tw`flex-row items-center p-3 border-b border-white/10 active:bg-white/5`}
                   >
-                    <Image
-                      source={logoImages[item.icon as keyof typeof logoImages] || logoImages["Google"]}
-                      style={tw`w-8 h-8 rounded-full`}
-                    />
-                    <View style={tw`ml-4 flex-1`}>
-                      <Text style={tw`text-base font-semibold text-white`}>
+                    {item.logo ? (
+                      <Image
+                        source={{ uri: item.logo }}
+                        style={tw`w-6 h-6 rounded-full`}
+                      />
+                    ) : (
+                      <View
+                        style={[
+                          tw`w-6 h-6 rounded-full justify-center items-center`,
+                          { backgroundColor: item.color },
+                        ]}
+                      >
+                        <Text style={tw`text-white text-xs font-bold`}>
+                          {item.name.charAt(0)}
+                        </Text>
+                      </View>
+                    )}
+                    <View style={tw`ml-3 flex-1`}>
+                      <Text style={tw`text-sm font-semibold text-white`}>
                         {item.name}
                       </Text>
-                      <Text style={tw`text-sm text-white/80`}>
+                      <Text style={tw`text-xs text-white/80`}>
                         ${item.price.toFixed(2)}
                       </Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={20} color="white" />
+                    <Ionicons name="chevron-forward" size={16} color="white" />
                   </TouchableOpacity>
                 )}
                 keyExtractor={(item) => item.id}
               />
             ) : (
-              <View style={tw`items-center justify-center p-6`}>
+              <View style={tw`items-center justify-center p-4`}>
                 <Ionicons
                   name="calendar-outline"
-                  size={44}
+                  size={32}
                   color="white"
-                  style={tw`opacity-20 mb-4`}
+                  style={tw`opacity-20 mb-3`}
                 />
                 <Text
-                  style={tw`text-lg font-medium text-white mb-5 text-center`}
+                  style={tw`text-sm font-medium text-white mb-3 text-center`}
                 >
                   No subscriptions due on this date
                 </Text>
                 <TouchableOpacity
                   onPress={handleAddSubscription}
-                  style={tw`flex-row items-center bg-primary px-4 py-2 rounded-lg`}
+                  style={tw`flex-row items-center bg-primary px-3 py-1.5 rounded-lg`}
                 >
-                  <Ionicons name="add-circle-outline" size={18} color="white" />
-                  <Text style={tw`text-sm font-semibold text-white ml-2`}>
+                  <Ionicons name="add-circle-outline" size={16} color="white" />
+                  <Text style={tw`text-xs font-semibold text-white ml-1.5`}>
                     Add Subscription
                   </Text>
                 </TouchableOpacity>

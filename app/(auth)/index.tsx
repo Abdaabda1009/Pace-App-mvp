@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useState, useRef, useCallback, memo, useEffect } from "react";
-import { router } from "expo-router";
+import { router, useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -21,6 +21,7 @@ import { supabase } from "../utils/supabase"; // Create this config file
 import React from "react";
 import InputField from "./components/InputField";
 import SocialLoginButton from "./components/SocialLoginButton";
+import { useColorScheme } from "react-native";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/;
@@ -53,6 +54,9 @@ const Auth = () => {
   const scrollViewRef = useRef<RNScrollView>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
+  const router = useRouter();
+  const colorScheme = useColorScheme();
+  const isDarkMode = colorScheme === "dark";
 
   // Animate form when mounted
   useEffect(() => {
@@ -348,8 +352,16 @@ const Auth = () => {
     return (metRequirements / PASSWORD_REQUIREMENTS.length) * 100;
   }, [password, checkPasswordStrength]);
 
+  const handleLegalPress = (type: "privacy" | "terms") => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push({
+      pathname: "/legal",
+      params: { initialTab: type },
+    });
+  };
+
   return (
-    <SafeAreaView className="flex-1 bg-slate-900">
+    <SafeAreaView className="flex-1 dark:bg-slate-900 bg-light-background">
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
@@ -623,10 +635,7 @@ const Auth = () => {
                     className="text-blue-400 underline font-medium"
                     accessibilityRole="link"
                     accessibilityLabel="Terms of Service"
-                    onPress={() => {
-                      Haptics.selectionAsync();
-                      /* Add navigation to Terms */
-                    }}
+                    onPress={() => handleLegalPress("terms")}
                   >
                     Terms of Service
                   </Text>{" "}
@@ -635,10 +644,7 @@ const Auth = () => {
                     className="text-blue-400 underline font-medium"
                     accessibilityRole="link"
                     accessibilityLabel="Privacy Policy"
-                    onPress={() => {
-                      Haptics.selectionAsync();
-                      /* Add navigation to Privacy Policy */
-                    }}
+                    onPress={() => handleLegalPress("privacy")}
                   >
                     Privacy Policy
                   </Text>
