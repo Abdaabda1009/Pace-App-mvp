@@ -40,13 +40,22 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   const insets = useSafeAreaInsets();
   const translateY = useRef(new Animated.Value(1000)).current;
   const opacity = useRef(new Animated.Value(0)).current;
+  const scaleButtons = useRef(new Animated.Value(1)).current;
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const [notesHeight, setNotesHeight] = useState(50);
+  const [notes, setNotes] = useState("");
   const [logoData, setLogoData] = useState<{
     url: string;
     color: string;
   } | null>(null);
+
+  // Initialize notes from subscription
+  useEffect(() => {
+    if (subscription?.notes) {
+      setNotes(subscription.notes);
+    }
+  }, [subscription?.notes]);
 
   useEffect(() => {
     const loadLogo = async () => {
@@ -69,11 +78,31 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
       },
       onPanResponderRelease: (_, gestureState) => {
         if (gestureState.dy > 200) {
-          onDismiss();
+          // Add dismiss animation
+          Animated.parallel([
+            Animated.timing(translateY, {
+              toValue: 1000,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+            Animated.timing(opacity, {
+              toValue: 0,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+          ]).start(() => onDismiss());
         } else {
           Animated.parallel([
-            Animated.spring(translateY, { toValue: 0, useNativeDriver: true }),
-            Animated.spring(opacity, { toValue: 1, useNativeDriver: true }),
+            Animated.spring(translateY, {
+              toValue: 0,
+              useNativeDriver: true,
+              damping: 80,
+              stiffness: 250,
+            }),
+            Animated.spring(opacity, {
+              toValue: 1,
+              useNativeDriver: true,
+            }),
           ]).start();
         }
       },
@@ -91,7 +120,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
         }),
         Animated.timing(opacity, {
           toValue: 1,
-          duration: 200,
+          duration: 300,
           useNativeDriver: true,
         }),
       ]).start();
@@ -99,12 +128,12 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
       Animated.parallel([
         Animated.timing(translateY, {
           toValue: 1000,
-          duration: 250,
+          duration: 300,
           useNativeDriver: true,
         }),
         Animated.timing(opacity, {
           toValue: 0,
-          duration: 150,
+          duration: 250,
           useNativeDriver: true,
         }),
       ]).start();
@@ -122,12 +151,27 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
     );
 
     if (diffDays <= 0) return { text: "Today", isUrgent: true };
+    if (diffDays === 1) return { text: "Tomorrow", isUrgent: true };
     if (diffDays <= 3)
       return { text: `${diffDays} days (Soon)`, isUrgent: true };
     return { text: `${diffDays} days`, isUrgent: false };
   };
 
   const handleButtonPress = (action: () => void) => {
+    // Add button press animation
+    Animated.sequence([
+      Animated.timing(scaleButtons, {
+        toValue: 0.95,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleButtons, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     action();
   };
@@ -138,6 +182,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     } else {
       try {
+        // Show loading indicator
         const success = await deleteSubscription(subscription.id);
         if (success) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -160,7 +205,17 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
 
   const getFormattedDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  const saveNotes = () => {
+    // Here you would typically call an API to save notes
+    // For now, we'll just show a success indicator
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
   if (!visible || !subscription) return null;
@@ -174,7 +229,8 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
         style={styles.backgroundOverlay}
         activeOpacity={1}
         onPress={onDismiss}
-        hitSlop={{ top: 20, right: 20, bottom: 20, left: 20 }}
+        accessibilityLabel="Close subscription details"
+        accessibilityHint="Dismisses the subscription modal"
       />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -187,13 +243,22 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
             {
               transform: [{ translateY }],
               paddingBottom: insets.bottom + 20,
-              backgroundColor: "#FFFFFF",
             },
           ]}
           {...panResponder.panHandlers}
         >
-          <View style={styles.handleIndicator} {...panResponder.panHandlers}>
-            <View style={styles.handleBar} />
+          <View style={styles.headerContainer}>
+            <View style={styles.handleIndicator}>
+              <View style={styles.handleBar} />
+            </View>
+            <TouchableOpacity
+              onPress={onDismiss}
+              style={styles.closeButton}
+              accessibilityLabel="Close"
+              accessibilityHint="Closes the subscription details"
+            >
+              <Ionicons name="close" size={24} color="#1E293B" />
+            </TouchableOpacity>
           </View>
 
           <ScrollView
@@ -202,23 +267,19 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.scrollContent}
           >
-            {/* Header Section */}
-            <View style={styles.header}>
-              <TouchableOpacity
-                onPress={onDismiss}
-                style={styles.closeButton}
-                hitSlop={{ top: 20, right: 20, bottom: 20, left: 20 }}
-              >
-                <Ionicons name="close" size={24} color="#1E293B" />
-              </TouchableOpacity>
-            </View>
-
             {/* Logo and Title Section */}
             <View style={styles.logoSection}>
-              <View
+              <Animated.View
                 style={[
                   styles.logoContainer,
-                  { backgroundColor: `${logoColor}20` },
+                  {
+                    backgroundColor: `${logoColor}20`,
+                    shadowColor: logoColor,
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 4,
+                    elevation: 4,
+                  },
                 ]}
               >
                 {logoData ? (
@@ -230,7 +291,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                 ) : (
                   <ActivityIndicator size="large" color={logoColor} />
                 )}
-              </View>
+              </Animated.View>
               <Text style={styles.title}>{subscription.name}</Text>
               <View
                 style={[
@@ -269,7 +330,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                   {renewalInfo.isUrgent && (
                     <Ionicons
                       name="alert-circle"
-                      size={14}
+                      size={16}
                       color="#F59E0B"
                       style={styles.alertIcon}
                     />
@@ -289,10 +350,14 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
 
             {/* Billing & Plan Details Card */}
             <View style={styles.card}>
-              <Text style={styles.sectionTitle}>Billing & Plan</Text>
+              <View style={styles.sectionTitleContainer}>
+                <Ionicons name="card-outline" size={18} color="#64748B" />
+                <Text style={styles.sectionTitle}>Billing & Plan</Text>
+              </View>
 
               {subscription.paymentMethod && (
                 <DetailRow
+                  icon="card-outline"
                   label="Payment Method"
                   value={
                     subscription.paymentMethod.type === "card"
@@ -304,6 +369,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
 
               {subscription.paymentMethod?.expiryDate && (
                 <DetailRow
+                  icon="calendar-outline"
                   label="Expiry Date"
                   value={subscription.paymentMethod.expiryDate}
                 />
@@ -311,6 +377,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
 
               {subscription.billingCycle && (
                 <DetailRow
+                  icon="refresh-outline"
                   label="Billing Cycle"
                   value={subscription.billingCycle}
                   capitalize
@@ -318,13 +385,19 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
               )}
 
               <DetailRow
+                icon="star-outline"
                 label="Plan Tier"
                 value={subscription.price === 0 ? "Free Plan" : "Premium Plan"}
               />
             </View>
 
             {/* Action Buttons */}
-            <View style={styles.actionButtons}>
+            <Animated.View
+              style={[
+                styles.actionButtons,
+                { transform: [{ scale: scaleButtons }] },
+              ]}
+            >
               <ActionButton
                 icon="pencil"
                 label="Edit"
@@ -340,24 +413,28 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
               <ActionButton
                 icon="trash"
                 label={showDeleteConfirm ? "Confirm" : "Delete"}
-                onPress={handleDeletePress}
+                onPress={() => handleButtonPress(handleDeletePress)}
                 color="#EF4444"
                 isConfirm={showDeleteConfirm}
               />
-            </View>
+            </Animated.View>
 
             {/* Notes Section */}
             <View style={styles.notesCard}>
-              <Text style={styles.sectionTitle}>Notes</Text>
+              <View style={styles.sectionTitleContainer}>
+                <Ionicons name="create-outline" size={18} color="#64748B" />
+                <Text style={styles.sectionTitle}>Notes</Text>
+              </View>
               <TextInput
                 style={[
                   styles.notesInput,
-                  { minHeight: Math.max(48, notesHeight) },
+                  { minHeight: Math.max(60, notesHeight) },
                 ]}
                 placeholder="Add notes about this subscription..."
                 placeholderTextColor="#94A3B8"
                 multiline
-                defaultValue={subscription.notes || ""}
+                value={notes}
+                onChangeText={setNotes}
                 onFocus={() =>
                   scrollViewRef.current?.scrollToEnd({ animated: true })
                 }
@@ -365,6 +442,14 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                   setNotesHeight(e.nativeEvent.contentSize.height)
                 }
               />
+              <TouchableOpacity
+                style={styles.saveNotesButton}
+                onPress={saveNotes}
+                accessibilityLabel="Save notes"
+                accessibilityHint="Saves your notes for this subscription"
+              >
+                <Text style={styles.saveNotesText}>Save Notes</Text>
+              </TouchableOpacity>
             </View>
           </ScrollView>
         </Animated.View>
@@ -373,9 +458,19 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   );
 };
 
-const DetailRow = ({ label, value, capitalize = false }: any) => (
+const DetailRow = ({ icon, label, value, capitalize = false }: any) => (
   <View style={styles.detailRow}>
-    <Text style={styles.cardLabel}>{label}</Text>
+    <View style={styles.detailLabelContainer}>
+      {icon && (
+        <Ionicons
+          name={icon}
+          size={16}
+          color="#64748B"
+          style={styles.detailIcon}
+        />
+      )}
+      <Text style={styles.cardLabel}>{label}</Text>
+    </View>
     <Text style={[styles.cardValue, capitalize && styles.capitalize]}>
       {value}
     </Text>
@@ -390,11 +485,23 @@ const ActionButton = ({
   isConfirm = false,
 }: any) => (
   <TouchableOpacity
-    style={[styles.actionButton, isConfirm && { backgroundColor: color }]}
+    style={[
+      styles.actionButton,
+      isConfirm && { backgroundColor: color },
+      {
+        shadowColor: color,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
+        elevation: 3,
+      },
+    ]}
     onPress={onPress}
-    activeOpacity={0.9}
+    activeOpacity={0.8}
+    accessibilityLabel={label}
+    accessibilityRole="button"
   >
-    <Ionicons name={icon} size={20} color={isConfirm ? "white" : color} />
+    <Ionicons name={icon} size={22} color={isConfirm ? "white" : color} />
     <Text
       style={[styles.actionButtonText, { color: isConfirm ? "white" : color }]}
     >
@@ -407,10 +514,11 @@ const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 50,
+    paddingTop: 32,
   },
   backgroundOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(0,0,0,0.6)",
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -420,45 +528,51 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     paddingHorizontal: 24,
-    paddingTop: 62,
+    paddingTop: 12,
+    backgroundColor: "#FFFFFF",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 20,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 24,
+  },
+  headerContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 8,
   },
   handleIndicator: {
+    flex: 1,
     alignItems: "center",
-    marginBottom: 16,
   },
   handleBar: {
     width: 48,
-    height: 4,
+    height: 5,
     backgroundColor: "#CBD5E1",
-    borderRadius: 2,
+    borderRadius: 3,
   },
   scrollContent: {
-    paddingBottom: 32,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    marginBottom: 8,
+    paddingBottom: 40,
   },
   closeButton: {
-    padding: 8,
+    padding: 10,
+    borderRadius: 20,
+    backgroundColor: "#F1F5F9",
   },
   logoSection: {
     alignItems: "center",
-    marginBottom: 24,
-    gap: 12,
+    marginVertical: 24,
+    gap: 16,
   },
   logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 16,
+    width: 88,
+    height: 88,
+    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#F8FAFC",
   },
   logoImage: {
     width: 64,
@@ -466,25 +580,30 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: "700",
     color: "#0F172A",
-    marginTop: 8,
+    marginTop: 4,
   },
   categoryBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
   },
   categoryText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "600",
   },
   card: {
     backgroundColor: "#F8FAFC",
-    borderRadius: 20,
+    borderRadius: 24,
     padding: 20,
-    marginBottom: 16,
+    marginBottom: 20,
+    shadowColor: "#64748B",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   cardRow: {
     flexDirection: "row",
@@ -496,12 +615,12 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   price: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "700",
     color: "#0F172A",
   },
   yearlyPrice: {
-    fontSize: 12,
+    fontSize: 13,
     color: "#64748B",
     marginTop: 4,
   },
@@ -516,38 +635,54 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   cardLabel: {
-    fontSize: 14,
+    fontSize: 15,
     color: "#64748B",
   },
   renewalContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
   },
   alertIcon: {
     marginRight: 4,
   },
   renewalText: {
-    fontSize: 14,
+    fontSize: 15,
     color: "#0F172A",
+    fontWeight: "500",
   },
   urgentText: {
     color: "#F59E0B",
     fontWeight: "600",
   },
-  sectionTitle: {
-    fontSize: 16,
-    color: "#64748B",
+  sectionTitleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 16,
+    gap: 8,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: "600",
+    color: "#64748B",
   },
   detailRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 16,
+  },
+  detailLabelContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  detailIcon: {
+    width: 18,
   },
   cardValue: {
-    fontSize: 14,
+    fontSize: 15,
+    fontWeight: "500",
     color: "#0F172A",
   },
   capitalize: {
@@ -562,27 +697,52 @@ const styles = StyleSheet.create({
   actionButton: {
     flex: 1,
     alignItems: "center",
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: "rgba(47, 128, 237, 0.1)",
+    paddingVertical: 16,
+    borderRadius: 16,
+    backgroundColor: "#F8FAFC",
   },
   actionButtonText: {
     marginTop: 8,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "600",
   },
   notesCard: {
     backgroundColor: "#F8FAFC",
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 24,
+    padding: 20,
+    shadowColor: "#64748B",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   notesInput: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
-    fontSize: 14,
+    fontSize: 15,
     color: "#0F172A",
     textAlignVertical: "top",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  saveNotesButton: {
+    backgroundColor: "#2F80ED",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignSelf: "flex-end",
+    marginTop: 16,
+    shadowColor: "#2F80ED",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  saveNotesText: {
+    color: "white",
+    fontWeight: "600",
+    fontSize: 14,
   },
 });
 
