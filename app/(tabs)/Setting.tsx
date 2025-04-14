@@ -64,6 +64,11 @@ const Setting = () => {
     router.push("/Account");
   };
 
+  const handleNotificationPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push("/Notifications");
+  };
+
   const handleHelpSupportPress = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
@@ -126,7 +131,11 @@ const Setting = () => {
             title="Account"
             onPress={handleAccountPress}
           />
-          <SettingItem icon="notifications-outline" title="Notifications" />
+          <SettingItem
+            icon="notifications-outline"
+            title="Notifications"
+            onPress={handleNotificationPress}
+          />
           <SettingItem
             icon="lock-closed-outline"
             title="Privacy"

@@ -206,6 +206,31 @@ const _layout = () => {
             ),
           })}
         />
+        <Tabs.Screen
+          name="Notifications"
+          options={({ navigation }: { navigation: NavigationProp<any> }) => ({
+            headerShown: true,
+            headerTitle: "Notifications",
+            headerTitleStyle: {
+              color: isDarkMode ? "#FFFFFF" : "#000000",
+              fontSize: 20,
+              fontWeight: "bold",
+            },
+            headerLeft: () => (
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                style={{ padding: 8, marginLeft: 8 }}
+              >
+                <Ionicons
+                  name="arrow-back"
+                  size={24}
+                  color={isDarkMode ? "#FFFFFF" : "#000000"}
+                />
+              </TouchableOpacity>
+            ),
+          })}
+        />
       </Tabs>
 
       <AddSubscriptionModal
