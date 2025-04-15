@@ -61,7 +61,7 @@ const Setting = () => {
 
   const handleAccountPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push("/Account");
+    router.navigate("Account");
   };
 
   const handleNotificationPress = () => {

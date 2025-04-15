@@ -4,58 +4,35 @@ import {
   ScrollView,
   TouchableOpacity,
   useColorScheme,
-  Animated,
-  Easing,
 } from "react-native";
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import { router, useNavigation } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
-import { FadeInDown, FadeInUp, SlideInLeft } from "react-native-reanimated";
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+  SlideInLeft,
+} from "react-native-reanimated";
 
 const Pace = () => {
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === "dark";
   const navigation = useNavigation();
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const featureAnim = useRef(new Animated.Value(0)).current;
 
   const handleBackPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     navigation.goBack();
   };
 
-  useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 800,
-      easing: Easing.out(Easing.exp),
-      useNativeDriver: true,
-    }).start();
-
-    // Staggered animation for features
-    Animated.stagger(
-      100,
-      Array(5)
-        .fill()
-        .map(() =>
-          Animated.timing(featureAnim, {
-            toValue: 1,
-            duration: 500,
-            useNativeDriver: true,
-          })
-        )
-    ).start();
-  }, []);
-
   return (
     <View className="flex-1 bg-light-background dark:bg-primary">
       <ScrollView
-        className="flex-1 px-6 py-4"
+        className="flex-1 px-6 py-32"
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View style={{ opacity: fadeAnim }}>
+        <Animated.View entering={FadeInDown.duration(800)}>
           <Text
             className="text-lg mb-6 leading-6"
             style={{
@@ -90,10 +67,6 @@ const Pace = () => {
                 key={index}
                 entering={FadeInDown.duration(500).delay(index * 100)}
                 className="mb-3 p-4 rounded-xl bg-light-secondary/10 dark:bg-secondary/10"
-                style={{
-                  transform: [{ scale: featureAnim }],
-                  opacity: featureAnim,
-                }}
               >
                 <View className="flex-row items-center">
                   <Ionicons
