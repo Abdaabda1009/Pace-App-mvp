@@ -14,6 +14,8 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
+  AccessibilityInfo,
+  Easing,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
@@ -21,6 +23,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { getLogoData } from "../utils/logoUtils";
 import { deleteSubscription } from "../utils/subscriptionLogic";
 import { BlurView } from "expo-blur";
+import {
+  styles,
+  animationConstants,
+} from "./SubscriptionModal/styles/SubscriptionModalStyles";
+import { DetailRow } from "./SubscriptionModal/DetailRow";
+import { ActionButton } from "./SubscriptionModal/ActionButton";
+
+const { height: screenHeight } = Dimensions.get("window");
+const modalHeight = screenHeight * 0.65;
+const SMOOTH_EASING = Easing.bezier(0.25, 0.1, 0.25, 1.0);
 
 interface SubscriptionModalProps {
   visible: boolean;
@@ -29,6 +41,8 @@ interface SubscriptionModalProps {
   onEdit?: (subscription: any) => void;
   onPause?: (subscription: any) => void;
   onDelete?: (subscription: any) => void;
+  onSheetAnimationStart?: () => void;
+  onSheetAnimationEnd?: (visible: boolean) => void;
 }
 
 const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
@@ -38,14 +52,14 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   onEdit = () => {},
   onPause = () => {},
   onDelete = () => {},
+  onSheetAnimationStart,
+  onSheetAnimationEnd,
 }) => {
   const insets = useSafeAreaInsets();
-  const { height: screenHeight } = Dimensions.get("window");
-  const modalHeight = screenHeight * 0.65; // At least half of screen height
-
-  const translateY = useRef(new Animated.Value(screenHeight)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
-  const scaleButtons = useRef(new Animated.Value(1)).current;
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const animation = useRef(new Animated.Value(0)).current;
+  const animationRef = useRef<Animated.CompositeAnimation | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSavingNotes, setIsSavingNotes] = useState(false);
@@ -96,94 +110,105 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
     outputRange: ["0deg", "360deg"],
   });
 
+  // Animation interpolations
+  const translateY = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [screenHeight * 0.5, 0],
+  });
+
+  const backdropOpacity = animation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 0.3],
+  });
+
+  // Effects
+  useEffect(() => {
+    if (Platform.OS === "ios") {
+      AccessibilityInfo.isReduceMotionEnabled().then(setReducedMotion);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!visible) return;
+
+    onSheetAnimationStart?.();
+    const anim = Animated.spring(animation, {
+      toValue: 1,
+      useNativeDriver: true,
+      stiffness: 100,
+      damping: 20,
+    });
+    animationRef.current = anim;
+    anim.start(() => onSheetAnimationEnd?.(true));
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    AccessibilityInfo.announceForAccessibility("Subscription details");
+
+    return () => {
+      animationRef.current?.stop();
+      animationRef.current = null;
+    };
+  }, [visible]);
+
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderMove: (_, gestureState) => {
-        if (gestureState.dy > 0) {
-          translateY.setValue(gestureState.dy);
-          opacity.setValue(1 - gestureState.dy / 400);
+      onMoveShouldSetPanResponder: (_, { dy, dx }) => {
+        return (
+          Math.abs(dy) > Math.abs(dx) * 1.5 &&
+          Math.abs(dy) > animationConstants.MIN_DISTANCE_TO_TRIGGER
+        );
+      },
+      onPanResponderGrant: () => {
+        animationRef.current?.stop();
+        setIsDragging(true);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      },
+      onPanResponderMove: (_, { dy }) => {
+        if (dy > 0)
+          animation.setValue(Math.max(0, 1 - dy / (screenHeight * 0.6)));
+      },
+      onPanResponderRelease: (_, { dy, vy }) => {
+        setIsDragging(false);
+        const shouldDismiss =
+          (dy / screenHeight >
+            animationConstants.DISMISS_THRESHOLD / screenHeight &&
+            vy > 0) ||
+          vy > animationConstants.VELOCITY_THRESHOLD;
+
+        if (shouldDismiss) {
+          Animated.spring(animation, {
+            toValue: 0,
+            useNativeDriver: true,
+            stiffness: 200,
+            damping: 20,
+          }).start(() => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            onDismiss();
+          });
+        } else {
+          Animated.spring(animation, {
+            toValue: 1,
+            useNativeDriver: true,
+          }).start();
         }
       },
-      onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dy > 150) {
-          // Add dismiss animation
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          Animated.parallel([
-            Animated.timing(translateY, {
-              toValue: screenHeight,
-              duration: 300,
-              useNativeDriver: true,
-            }),
-            Animated.timing(opacity, {
-              toValue: 0,
-              duration: 300,
-              useNativeDriver: true,
-            }),
-          ]).start(() => onDismiss());
-        } else {
-          Animated.parallel([
-            Animated.spring(translateY, {
-              toValue: 0,
-              useNativeDriver: true,
-              damping: 80,
-              stiffness: 250,
-            }),
-            Animated.spring(opacity, {
-              toValue: 1,
-              useNativeDriver: true,
-            }),
-          ]).start();
-        }
+      onPanResponderTerminate: () => {
+        setIsDragging(false);
+        Animated.spring(animation, {
+          toValue: 1,
+          useNativeDriver: true,
+        }).start();
       },
     })
   ).current;
 
-  useEffect(() => {
-    if (visible) {
-      setShowDeleteConfirm(false);
-
-      // Reset values
-      translateY.setValue(screenHeight);
-      opacity.setValue(0);
-      cardScale.setValue(0.95);
-
-      // Animate modal entry
-      Animated.parallel([
-        Animated.spring(translateY, {
-          toValue: 0,
-          useNativeDriver: true,
-          damping: 80,
-          stiffness: 250,
-        }),
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.spring(cardScale, {
-          toValue: 1,
-          useNativeDriver: true,
-          damping: 15,
-          stiffness: 150,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(translateY, {
-          toValue: screenHeight,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 0,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-      ]).start();
-      setShowDeleteConfirm(false);
-    }
-  }, [visible, screenHeight]);
+  const handleOutsideTap = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Animated.spring(animation, {
+      toValue: 0,
+      useNativeDriver: true,
+    }).start(onDismiss);
+  };
 
   const daysUntilRenewal = (
     renewalDate: string
@@ -214,14 +239,13 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   };
 
   const handleButtonPress = (action: () => void) => {
-    // Add button press animation with haptic feedback
     Animated.sequence([
-      Animated.timing(scaleButtons, {
-        toValue: 0.92,
+      Animated.timing(cardScale, {
+        toValue: 0.97,
         duration: 100,
         useNativeDriver: true,
       }),
-      Animated.timing(scaleButtons, {
+      Animated.timing(cardScale, {
         toValue: 1,
         duration: 150,
         useNativeDriver: true,
@@ -239,7 +263,6 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
     } else {
       try {
         setIsDeleting(true);
-        // Show loading indicator
         const success = await deleteSubscription(subscription.id);
         if (success) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -272,13 +295,10 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   };
 
   const saveNotes = async () => {
-    // Here you would typically call an API to save notes
     setIsSavingNotes(true);
     try {
-      // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 500));
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      // Show success animation
     } catch (error) {
       Alert.alert("Error", "Failed to save notes. Please try again.");
     } finally {
@@ -303,39 +323,40 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   };
 
   return (
-    <Animated.View style={[styles.container, { opacity }]}>
-      <BlurView intensity={90} tint="dark" style={styles.backgroundOverlay}>
+    <View style={styles.container}>
+      <Animated.View
+        style={[styles.backgroundOverlay, { opacity: backdropOpacity }]}
+      >
         <TouchableOpacity
           style={styles.backgroundOverlayTouch}
-          activeOpacity={1}
-          onPress={onDismiss}
+          onPress={handleOutsideTap}
+          accessibilityRole="button"
           accessibilityLabel="Close subscription details"
-          accessibilityHint="Dismisses the subscription modal"
         />
-      </BlurView>
+      </Animated.View>
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={insets.top}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
         style={styles.keyboardAvoidingView}
       >
         <Animated.View
           style={[
             styles.modalContent,
             {
-              transform: [{ translateY }, { scale: cardScale }],
-              paddingBottom: insets.bottom + 20,
-              minHeight: modalHeight,
+              transform: [{ translateY }],
+              paddingBottom: insets.bottom,
             },
           ]}
           {...panResponder.panHandlers}
+          accessibilityViewIsModal
         >
           <View style={styles.headerContainer}>
             <View style={styles.handleIndicator}>
               <View style={styles.handleBar} />
             </View>
             <TouchableOpacity
-              onPress={onDismiss}
+              onPress={handleOutsideTap}
               style={styles.closeButton}
               accessibilityLabel="Close"
               accessibilityHint="Closes the subscription details"
@@ -387,7 +408,9 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
             </View>
 
             {/* Price and Renewal Card */}
-            <Animated.View style={[styles.card, { transform: [{ scale: 1 }] }]}>
+            <Animated.View
+              style={[styles.card, { transform: [{ scale: cardScale }] }]}
+            >
               <View style={styles.cardRow}>
                 <Text style={styles.cardLabel}>Monthly Price</Text>
                 <View style={styles.priceContainer}>
@@ -433,7 +456,9 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
             </Animated.View>
 
             {/* Billing & Plan Details Card */}
-            <Animated.View style={[styles.card, { transform: [{ scale: 1 }] }]}>
+            <Animated.View
+              style={[styles.card, { transform: [{ scale: cardScale }] }]}
+            >
               <View style={styles.sectionTitleContainer}>
                 <Ionicons name="card-outline" size={18} color="#64748B" />
                 <Text style={styles.sectionTitle}>Billing & Plan</Text>
@@ -479,7 +504,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
             <Animated.View
               style={[
                 styles.actionButtons,
-                { transform: [{ scale: scaleButtons }] },
+                { transform: [{ scale: cardScale }] },
               ]}
             >
               <ActionButton
@@ -506,7 +531,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
 
             {/* Notes Section */}
             <Animated.View
-              style={[styles.notesCard, { transform: [{ scale: 1 }] }]}
+              style={[styles.notesCard, { transform: [{ scale: cardScale }] }]}
             >
               <View style={styles.sectionTitleContainer}>
                 <Ionicons name="create-outline" size={18} color="#64748B" />
@@ -558,327 +583,8 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
           </ScrollView>
         </Animated.View>
       </KeyboardAvoidingView>
-    </Animated.View>
+    </View>
   );
 };
-
-const DetailRow = ({ icon, label, value, capitalize = false }: any) => (
-  <View style={styles.detailRow}>
-    <View style={styles.detailLabelContainer}>
-      {icon && (
-        <Ionicons
-          name={icon}
-          size={16}
-          color="#64748B"
-          style={styles.detailIcon}
-        />
-      )}
-      <Text style={styles.cardLabel}>{label}</Text>
-    </View>
-    <Text style={[styles.cardValue, capitalize && styles.capitalize]}>
-      {value}
-    </Text>
-  </View>
-);
-
-const ActionButton = ({
-  icon,
-  label,
-  onPress,
-  color,
-  isConfirm = false,
-  isLoading = false,
-}: any) => (
-  <TouchableOpacity
-    style={[
-      styles.actionButton,
-      isConfirm && { backgroundColor: color },
-      {
-        shadowColor: color,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 3,
-        elevation: 3,
-      },
-    ]}
-    onPress={onPress}
-    activeOpacity={0.7}
-    disabled={isLoading}
-    accessibilityLabel={label}
-    accessibilityRole="button"
-  >
-    {isLoading ? (
-      <ActivityIndicator size="small" color={isConfirm ? "white" : color} />
-    ) : (
-      <>
-        <Ionicons name={icon} size={22} color={isConfirm ? "white" : color} />
-        <Text
-          style={[
-            styles.actionButtonText,
-            { color: isConfirm ? "white" : color },
-          ]}
-        >
-          {label}
-        </Text>
-      </>
-    )}
-  </TouchableOpacity>
-);
-
-const styles = StyleSheet.create({
-  container: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 50,
-  },
-  backgroundOverlay: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  backgroundOverlayTouch: {
-    flex: 1,
-  },
-  keyboardAvoidingView: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    paddingHorizontal: 12,
-    paddingTop: 12,
-    backgroundColor: "#FFFFFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 24,
-    elevation: 24,
-  },
-  headerContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-  },
-  handleIndicator: {
-    flex: 1,
-    alignItems: "center",
-  },
-  handleBar: {
-    width: 48,
-    height: 5,
-    backgroundColor: "#CBD5E1",
-    borderRadius: 3,
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  scrollView: {
-    flexGrow: 1,
-  },
-  closeButton: {
-    padding: 10,
-    borderRadius: 20,
-    backgroundColor: "#F1F5F9",
-  },
-  logoSection: {
-    alignItems: "center",
-    marginVertical: 16,
-    gap: 12,
-  },
-  logoContainer: {
-    width: 88,
-    height: 88,
-    borderRadius: 24,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#F8FAFC",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  logoImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginTop: 4,
-  },
-  categoryBadge: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 12,
-  },
-  categoryText: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  card: {
-    backgroundColor: "#F8FAFC",
-    borderRadius: 24,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: "#64748B",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  cardRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  priceContainer: {
-    alignItems: "flex-end",
-  },
-  price: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-  yearlyPrice: {
-    fontSize: 13,
-    color: "#64748B",
-    marginTop: 4,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: "#E2E8F0",
-    marginVertical: 16,
-  },
-  iconLabel: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  cardLabel: {
-    fontSize: 15,
-    color: "#64748B",
-  },
-  renewalContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  alertIcon: {
-    marginRight: 4,
-  },
-  renewalText: {
-    fontSize: 15,
-    color: "#0F172A",
-    fontWeight: "500",
-  },
-  urgentText: {
-    fontWeight: "600",
-  },
-  sectionTitleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-    gap: 8,
-  },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: "#64748B",
-  },
-  detailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  detailLabelContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  detailIcon: {
-    width: 18,
-  },
-  cardValue: {
-    fontSize: 15,
-    fontWeight: "500",
-    color: "#0F172A",
-  },
-  capitalize: {
-    textTransform: "capitalize",
-  },
-  actionButtons: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 12,
-    marginBottom: 20,
-  },
-  actionButton: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 16,
-    borderRadius: 20,
-    backgroundColor: "#F8FAFC",
-  },
-  actionButtonText: {
-    marginTop: 8,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  notesCard: {
-    backgroundColor: "#F8FAFC",
-    borderRadius: 24,
-    padding: 20,
-    shadowColor: "#64748B",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  notesInput: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    fontSize: 15,
-    color: "#0F172A",
-    textAlignVertical: "top",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  saveNotesButton: {
-    backgroundColor: "#2F80ED",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    alignSelf: "flex-end",
-    marginTop: 16,
-    shadowColor: "#2F80ED",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  saveIcon: {
-    marginRight: 6,
-  },
-  saveNotesText: {
-    color: "white",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  disabledButton: {
-    backgroundColor: "#94A3B8",
-    shadowColor: "#94A3B8",
-  },
-  savingNotesButton: {
-    backgroundColor: "#2F80ED80",
-  },
-});
 
 export default SubscriptionModal;

@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import BottomTabBar from "../Components/CustomTabBar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AddSubscriptionModal from "../Components/AddSubscriptionModal";
+import SubscriptionModal from "../Components/SubscriptionModal";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { NavigationProp } from "@react-navigation/native";
 import HeaderIcons from "../Components/HeaderIcons";
@@ -30,6 +31,9 @@ interface AddSubscriptionModalProps {
 const _layout = () => {
   const insets = useSafeAreaInsets();
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [isSubscriptionModalVisible, setIsSubscriptionModalVisible] =
+    useState(false);
+  const [selectedSubscription, setSelectedSubscription] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const router = useRouter();
 
@@ -238,7 +242,24 @@ const _layout = () => {
         onDismiss={() => setIsAddModalVisible(false)}
         onEmailScan={() => console.log("Email scan pressed")}
         onDocumentUpload={() => console.log("Document upload pressed")}
-        isDarkMode={isDarkMode}
+      />
+
+      <SubscriptionModal
+        visible={isSubscriptionModalVisible}
+        subscription={selectedSubscription}
+        onDismiss={() => setIsSubscriptionModalVisible(false)}
+        onEdit={(subscription) => {
+          // Handle edit subscription
+          console.log("Edit subscription:", subscription);
+        }}
+        onPause={(subscription) => {
+          // Handle pause subscription
+          console.log("Pause subscription:", subscription);
+        }}
+        onDelete={(subscription) => {
+          // Handle delete subscription
+          console.log("Delete subscription:", subscription);
+        }}
       />
     </View>
   );
