@@ -1,10 +1,11 @@
 import React from "react";
 import { View, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { styles } from "./styles/SubscriptionModalStyles";
+import "nativewind";
+import tw from "tailwind-react-native-classnames";
 
 interface DetailRowProps {
-  icon: string;
+  icon: keyof typeof Ionicons.glyphMap;
   label: string;
   value: string;
   capitalize?: boolean;
@@ -16,20 +17,27 @@ export const DetailRow: React.FC<DetailRowProps> = ({
   value,
   capitalize = false,
 }) => (
-  <View style={styles.detailRow}>
-    <View style={styles.detailLabelContainer}>
+  <View className="flex-row items-center py-3 px-4">
+    <View className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 justify-center items-center mr-3">
       {icon && (
         <Ionicons
           name={icon}
           size={16}
-          color="#64748B"
-          style={styles.detailIcon}
+          className="text-gray-500 dark:text-slate-400"
         />
       )}
-      <Text style={styles.cardLabel}>{label}</Text>
     </View>
-    <Text style={[styles.cardValue, capitalize && styles.capitalize]}>
-      {value}
-    </Text>
+    <View className="flex-1">
+      <Text className="text-sm text-slate-500 dark:text-slate-400 mb-1">
+        {label}
+      </Text>
+      <Text
+        className={`text-base text-slate-800 dark:text-slate-200 font-medium ${
+          capitalize ? "capitalize" : ""
+        }`}
+      >
+        {value}
+      </Text>
+    </View>
   </View>
 );

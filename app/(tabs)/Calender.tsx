@@ -1,5 +1,10 @@
 import React, { useCallback, useState, useEffect } from "react";
-import { View, ActivityIndicator, RefreshControl } from "react-native";
+import {
+  View,
+  ActivityIndicator,
+  RefreshControl,
+  useColorScheme,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { DateObject, Subscription } from "../Components/Calender/types";
@@ -13,7 +18,8 @@ import { getLogoData } from "../utils/logoUtils";
 import { getSubscriptionsForDate } from "../Components/Calender/utils";
 
 const Calender = () => {
-  // Initialize with current date
+  const colorScheme = useColorScheme();
+  const isDarkMode = colorScheme === "dark";
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<DateObject | null>(null);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -32,12 +38,11 @@ const Calender = () => {
     pageY: number;
   } | null>(null);
 
-  const fetchSubscriptions = async () => {
+  const fetchSubscriptions = async (isRefreshing: boolean = false) => {
     try {
-      setIsLoading(true);
+      if (!isRefreshing) setIsLoading(true);
       const data = await getAllSubscriptions();
 
-      // Fetch logos for each subscription
       const subscriptionsWithLogos = await Promise.all(
         data.map(async (subscription) => {
           const logoData = await getLogoData(subscription.name);
@@ -64,18 +69,16 @@ const Calender = () => {
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchSubscriptions();
+    fetchSubscriptions(true);
   }, []);
 
   const handleNavigateMonth = useCallback(
     (direction: "prev" | "next") => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       const newDate = new Date(currentDate);
-      if (direction === "prev") {
-        newDate.setMonth(newDate.getMonth() - 1);
-      } else {
-        newDate.setMonth(newDate.getMonth() + 1);
-      }
+      direction === "prev"
+        ? newDate.setMonth(newDate.getMonth() - 1)
+        : newDate.setMonth(newDate.getMonth() + 1);
       setCurrentDate(newDate);
     },
     [currentDate]
