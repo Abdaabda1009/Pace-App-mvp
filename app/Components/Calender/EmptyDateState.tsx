@@ -12,7 +12,7 @@ export const EmptyDateState = () => {
       <Ionicons
         name="calendar-clear-outline"
         size={12}
-        className="text-light-text dark:text-textLight"
+        className="text-textDark dark:text-textLight"
       />
     </View>
   );

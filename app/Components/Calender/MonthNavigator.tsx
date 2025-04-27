@@ -49,15 +49,11 @@ export const MonthNavigator = ({
         accessibilityHint="Double tap to navigate to the previous month"
         accessibilityRole="button"
       >
-        <Ionicons
-          name="chevron-back"
-          size={24}
-          className="text-brandBlue" // Brand color maintained
-        />
+        <Ionicons name="chevron-back" size={24} className="text-brandBlue" />
       </TouchableOpacity>
 
       <Animated.Text
-        className="text-2xl font-bold text-light-text dark:text-textLight"
+        className="text-2xl font-bold text-textDark dark:text-textLight"
         style={animatedStyle}
         accessibilityLabel={formatMonthYear(currentDate)}
         accessibilityRole="header"
@@ -72,11 +68,7 @@ export const MonthNavigator = ({
         accessibilityHint="Double tap to navigate to the next month"
         accessibilityRole="button"
       >
-        <Ionicons
-          name="chevron-forward"
-          size={24}
-          className="text-brandBlue" // Brand color maintained
-        />
+        <Ionicons name="chevron-forward" size={24} className="text-brandBlue" />
       </TouchableOpacity>
     </Animated.View>
   );

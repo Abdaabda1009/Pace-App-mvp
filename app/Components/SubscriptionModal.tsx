@@ -191,7 +191,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   if (!visible || !subscription) return null;
 
   const renewalInfo = daysUntilRenewal(subscription.renewalDate);
-  const logoColor = logoData?.color || "#3A6D8E"; // Using brandBlue from Tailwind config
+  const logoColor = logoData?.color || "#3A6D8E";
 
   return (
     <View className="absolute inset-0 z-50">
@@ -213,7 +213,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
         className="flex-1 justify-end"
       >
         <Animated.View
-          className="bg-white dark:bg-primary rounded-t-3xl px-3 pt-3 shadow-xl"
+          className="bg-light-background dark:bg-primary rounded-t-3xl px-3 pt-3 shadow-xl"
           style={[
             {
               transform: [{ translateY }],
@@ -225,7 +225,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
         >
           <View className="flex-row justify-between items-center py-3 px-2">
             <View className="flex-1 items-center">
-              <View className="w-12 h-1 bg-slate-300 rounded-full" />
+              <View className="w-12 h-1 bg-light-secondary dark:bg-secondary rounded-full" />
             </View>
           </View>
 
@@ -252,7 +252,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                   <ActivityIndicator size="large" color={logoColor} />
                 )}
               </View>
-              <Text className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+              <Text className="text-2xl font-bold text-textDark dark:text-textLight">
                 {subscription.name}
               </Text>
               <View
@@ -271,42 +271,46 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
             {/* Pricing Card */}
             <BlurView
               intensity={20}
-              className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-5 mb-4 shadow-sm"
+              className="bg-light-primary dark:bg-primary rounded-2xl p-5 mb-4 shadow-sm"
             >
               <View className="flex-row justify-between items-center mb-3">
-                <Text className="text-slate-500 dark:text-slate-300 text-base">
+                <Text className="text-textSecondary dark:text-textLightSecondary text-base">
                   Monthly Price
                 </Text>
                 <View className="items-end">
-                  <Text className="text-slate-900 dark:text-slate-100 text-xl font-bold">
+                  <Text className="text-textDark dark:text-textLight text-xl font-bold">
                     ${subscription.price.toFixed(2)}
                   </Text>
-                  <Text className="text-slate-500 dark:text-slate-400 text-xs mt-1">
+                  <Text className="text-textSecondary dark:text-textLightSecondary text-xs mt-1">
                     ${(subscription.price * 12).toFixed(2)}/year
                   </Text>
                 </View>
               </View>
 
-              <View className="h-px bg-slate-200 dark:bg-slate-600 my-4" />
+              <View className="h-px bg-light-secondary dark:bg-secondary my-4" />
 
               <View className="flex-row justify-between items-center">
                 <View className="flex-row items-center gap-2">
                   <Ionicons
                     name="calendar"
                     size={16}
-                    className="text-slate-500 dark:text-primary"
+                    color={Platform.select({
+                      ios: "#64748B",
+                      default: "#64748B",
+                    })}
+                    className="dark:text-textLightSecondary"
                   />
-                  <Text className="text-slate-500 dark:text-slate-300 text-base">
+                  <Text className="text-textSecondary dark:text-textLightSecondary text-base">
                     Next renewal
                   </Text>
                 </View>
                 <Text
                   className={`text-base font-medium ${
                     renewalInfo.severity === "danger"
-                      ? "text-red-500"
+                      ? "text-error"
                       : renewalInfo.severity === "warning"
-                      ? "text-amber-500"
-                      : "text-slate-500 dark:text-slate-400"
+                      ? "text-warning"
+                      : "text-textSecondary dark:text-textLightSecondary"
                   }`}
                 >
                   {renewalInfo.text}
@@ -317,33 +321,33 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
             {/* Action Buttons */}
             <View className="flex-row justify-between gap-3 mb-5">
               <TouchableOpacity
-                className="flex-1 items-center py-4 rounded-2xl bg-slate-50 dark:bg-slate-800"
+                className="flex-1 items-center py-4 rounded-2xl bg-light-secondary dark:bg-secondary"
                 onPress={() => handleButtonPress(() => onEdit(subscription))}
               >
                 <Ionicons
                   name="pencil"
                   size={20}
-                  className="text-blue-600 dark:text-blue-400"
+                  className="text-brandBlue dark:text-brandBlueLight"
                 />
-                <Text className="text-blue-600 dark:text-blue-400 text-sm font-semibold mt-2">
+                <Text className="text-brandBlue dark:text-brandBlueLight text-sm font-semibold mt-2">
                   Edit
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                className="flex-1 items-center py-4 rounded-2xl bg-slate-50 dark:bg-slate-800"
+                className="flex-1 items-center py-4 rounded-2xl bg-light-secondary dark:bg-secondary"
                 onPress={handleDeletePress}
                 disabled={isDeleting}
               >
                 {isDeleting ? (
-                  <ActivityIndicator size="small" className="text-red-500" />
+                  <ActivityIndicator size="small" className="text-error" />
                 ) : (
                   <>
                     <Ionicons
                       name="trash"
                       size={20}
-                      className="text-red-500 dark:text-red-400"
+                      className="text-error dark:text-errorLight"
                     />
-                    <Text className="text-red-500 dark:text-red-400 text-sm font-semibold mt-2">
+                    <Text className="text-error dark:text-errorLight text-sm font-semibold mt-2">
                       {showDeleteConfirm ? "Confirm" : "Delete"}
                     </Text>
                   </>
@@ -354,20 +358,20 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
             {/* Notes Section */}
             <BlurView
               intensity={20}
-              className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-5 shadow-sm"
+              className="bg-light-primary dark:bg-primary rounded-2xl p-5 shadow-sm"
             >
               <View className="flex-row items-center gap-2 mb-4">
                 <Ionicons
                   name="create-outline"
                   size={18}
-                  className="text-slate-500 dark:text-slate-300"
+                  className="text-textSecondary dark:text-textLightSecondary"
                 />
-                <Text className="text-slate-500 dark:text-slate-300 text-lg font-semibold">
+                <Text className="text-textSecondary dark:text-textLightSecondary text-lg font-semibold">
                   Notes
                 </Text>
               </View>
               <TextInput
-                className="bg-white dark:bg-slate-700 rounded-xl p-4 text-slate-900 dark:text-slate-100 text-base border border-slate-200 dark:border-slate-600"
+                className="bg-light-background dark:bg-primary rounded-xl p-4 text-textDark dark:text-textLight text-base border border-light-secondary dark:border-secondary"
                 placeholder="Add notes about this subscription..."
                 placeholderTextColor="#64748B"
                 multiline
@@ -380,8 +384,8 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
               <TouchableOpacity
                 className={`py-3 px-5 rounded-lg self-end mt-4 flex-row items-center justify-center shadow-md ${
                   notes.trim() === subscription.notes || isSavingNotes
-                    ? "bg-slate-400 dark:bg-slate-500"
-                    : "bg-blue-600 dark:bg-blue-500"
+                    ? "bg-light-secondary dark:bg-secondary"
+                    : "bg-brandBlue dark:bg-brandBlueDark"
                 }`}
                 onPress={saveNotes}
                 disabled={notes.trim() === subscription.notes || isSavingNotes}

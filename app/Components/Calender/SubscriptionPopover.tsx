@@ -17,8 +17,6 @@ import * as Haptics from "expo-haptics";
 import { Link, useRouter } from "expo-router";
 import { Subscription } from "./types";
 import { getMonthName } from "./utils";
-import "nativewind";
-import tw from "tailwind-react-native-classnames";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
@@ -125,10 +123,10 @@ export const SubscriptionPopover = ({
       onRequestClose={handleDismiss}
     >
       <TouchableWithoutFeedback onPress={handleDismiss}>
-        <View style={tw`flex-1 bg-black/50 justify-center items-center`}>
+        <View className="flex-1 bg-black/50 justify-center items-center">
           <Animated.View
+            className="bg-light-background dark:bg-primary rounded-xl shadow-lg border border-light-secondary dark:border-white/10"
             style={[
-              tw`bg-gray-900 rounded-xl shadow-lg border border-white/10`,
               {
                 opacity: opacityAnim,
                 transform: [{ scale: scaleAnim }],
@@ -137,17 +135,19 @@ export const SubscriptionPopover = ({
               },
             ]}
           >
-            <View
-              style={tw`flex-row justify-between items-center p-3 border-b border-white/10`}
-            >
-              <Text style={tw`text-base font-bold text-white`}>
+            <View className="flex-row justify-between items-center p-3 border-b border-light-secondary dark:border-white/10">
+              <Text className="text-base font-bold text-textDark dark:text-textLight">
                 {formattedDate}
               </Text>
               <TouchableOpacity
                 onPress={handleDismiss}
-                style={tw`p-1 rounded-lg active:bg-white/10`}
+                className="p-1 rounded-lg active:bg-black/10 dark:active:bg-white/10"
               >
-                <Ionicons name="close" size={20} color="white" />
+                <Ionicons
+                  name="close"
+                  size={20}
+                  className="text-textDark dark:text-textLight"
+                />
               </TouchableOpacity>
             </View>
 
@@ -161,57 +161,60 @@ export const SubscriptionPopover = ({
                       handleDismiss();
                       onSubscriptionPress(item);
                     }}
-                    style={tw`flex-row items-center p-3 border-b border-white/10 active:bg-white/5`}
+                    className="flex-row items-center p-3 border-b border-light-secondary dark:border-white/10 active:bg-black/5 dark:active:bg-white/5"
                   >
                     {item.logo ? (
                       <Image
                         source={{ uri: item.logo }}
-                        style={tw`w-6 h-6 rounded-full`}
+                        className="w-6 h-6 rounded-full"
                       />
                     ) : (
                       <View
-                        style={[
-                          tw`w-6 h-6 rounded-full justify-center items-center`,
-                          { backgroundColor: item.color },
-                        ]}
+                        className="w-6 h-6 rounded-full justify-center items-center"
+                        style={{ backgroundColor: item.color }}
                       >
-                        <Text style={tw`text-white text-xs font-bold`}>
+                        <Text className="text-white text-xs font-bold">
                           {item.name.charAt(0)}
                         </Text>
                       </View>
                     )}
-                    <View style={tw`ml-3 flex-1`}>
-                      <Text style={tw`text-sm font-semibold text-white`}>
+                    <View className="ml-3 flex-1">
+                      <Text className="text-sm font-semibold text-textDark dark:text-textLight">
                         {item.name}
                       </Text>
-                      <Text style={tw`text-xs text-white/80`}>
+                      <Text className="text-xs text-textDark/80 dark:text-textLight/80">
                         ${item.price.toFixed(2)}
                       </Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={16} color="white" />
+                    <Ionicons
+                      name="chevron-forward"
+                      size={16}
+                      className="text-textDark dark:text-textLight"
+                    />
                   </TouchableOpacity>
                 )}
                 keyExtractor={(item) => item.id}
               />
             ) : (
-              <View style={tw`items-center justify-center p-4`}>
+              <View className="items-center justify-center p-4">
                 <Ionicons
                   name="calendar-outline"
                   size={32}
-                  color="white"
-                  style={tw`opacity-20 mb-3`}
+                  className="text-textDark dark:text-textLight opacity-20 mb-3"
                 />
-                <Text
-                  style={tw`text-sm font-medium text-white mb-3 text-center`}
-                >
+                <Text className="text-sm font-medium text-textDark dark:text-textLight mb-3 text-center">
                   No subscriptions due on this date
                 </Text>
                 <TouchableOpacity
                   onPress={handleAddSubscription}
-                  style={tw`flex-row items-center bg-primary px-3 py-1.5 rounded-lg`}
+                  className="flex-row items-center bg-brandBlue px-3 py-1.5 rounded-lg"
                 >
-                  <Ionicons name="add-circle-outline" size={16} color="white" />
-                  <Text style={tw`text-xs font-semibold text-white ml-1.5`}>
+                  <Ionicons
+                    name="add-circle-outline"
+                    size={16}
+                    className="text-white"
+                  />
+                  <Text className="text-xs font-semibold text-white ml-1.5">
                     Add Subscription
                   </Text>
                 </TouchableOpacity>

@@ -66,7 +66,7 @@ const DateCell = React.memo(
         }`
       : "No subscriptions";
 
-    // Reset scale animation when selected state changes
+    // Animation effects remain the same
     useEffect(() => {
       Animated.spring(scaleAnim, {
         toValue: 1,
@@ -76,7 +76,6 @@ const DateCell = React.memo(
       }).start();
     }, [isSelected, scaleAnim]);
 
-    // Run pulsing animation for hint indicator when cell has multiple subscriptions
     useEffect(() => {
       if (hasMultipleSubscriptions) {
         const pulseAnimation = Animated.sequence([
@@ -126,11 +125,11 @@ const DateCell = React.memo(
         style={{
           width: cellSize,
           height: cellSize,
-          minWidth: 40, // Ensure minimum visible size
+          minWidth: 40,
           minHeight: 55,
           transform: [{ scale: scaleAnim }],
-          padding: 1,
         }}
+        className="p-px"
       >
         <TouchableOpacity
           ref={cellRef}
@@ -139,11 +138,14 @@ const DateCell = React.memo(
           onLongPress={handleLongPress}
           delayLongPress={500}
           className={`
-            flex-1 items-center justify-center
+            flex-1 items-center justify-center rounded-lg
             ${!isCurrentMonth ? "opacity-40" : ""}
-            ${isSelected ? "bg-white/20" : "bg-primary"}
-            ${isToday ? "border-2 border-white/20" : ""}
-            rounded-lg
+            ${
+              isSelected
+                ? "dark:bg-white/20 bg-light-secondary"
+                : "dark:bg-primary bg-light-primary"
+            }
+            ${isToday ? "border-2 dark:border-white/20 border-black/20" : ""}
           `}
           accessibilityLabel={dateLabel}
           accessibilityHint={subscriptionsLabel}
@@ -154,8 +156,11 @@ const DateCell = React.memo(
             <Text
               className={`
                 text-base font-medium pt-1
-                ${!isCurrentMonth ? "text-white" : "text-white"}
-                ${isToday ? "text-primary font-bold" : ""}
+                ${
+                  isToday
+                    ? "dark:text-textLight text-primary font-bold"
+                    : "dark:text-textLight text-textDark"
+                }
               `}
             >
               {dateObj.day}
@@ -174,7 +179,7 @@ const DateCell = React.memo(
 
             {hasMultipleSubscriptions && (
               <Animated.View
-                className="absolute bottom-0 w-2 h-1 bg-primary text-white rounded-full"
+                className="absolute bottom-0 w-2 h-1 dark:bg-primary bg-light-primary rounded-full"
                 style={{ opacity: hintOpacity }}
               />
             )}
